@@ -1,0 +1,2536 @@
+<meta charset="utf-8">
+<title>Tangent · Glove80 typing trainer</title>
+<meta name="description" content="Typing trainer for the MoErgo Glove80 split ergonomic keyboard. On-screen board with finger guidance, ZMK keymap and Layout Editor import, international layouts, and drills that target your weak keys.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #F6F7F5;
+    --surface: #FFFFFF;
+    --surface-2: #EDF0EE;
+    --ink: #1D2836;
+    --muted: #617082;
+    --line: #D9DEDA;
+    --blue: #2B6CB8;
+    --blue-ink: #FFFFFF;
+    --yellow: #F2C21B;
+    --yellow-ink: #26313F;
+    --good: #3E8E5A;
+    --bad: #C4504F;
+    --bad-bg: #F7E3E2;
+    --key-bg: #FFFFFF;
+    --key-edge: #C8CFC9;
+    --shadow: 0 1px 2px rgba(29,40,54,.06), 0 4px 14px rgba(29,40,54,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1621;
+      --surface: #17202D;
+      --surface-2: #1E2937;
+      --ink: #E8ECF1;
+      --muted: #8C9AAD;
+      --line: #2A3646;
+      --blue: #5C97D6;
+      --blue-ink: #0F1621;
+      --yellow: #F2C21B;
+      --yellow-ink: #10161F;
+      --good: #5FB380;
+      --bad: #E07A79;
+      --bad-bg: #3A2426;
+      --key-bg: #202B3A;
+      --key-edge: #34435A;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7F5; --surface: #FFFFFF; --surface-2: #EDF0EE; --ink: #1D2836;
+    --muted: #617082; --line: #D9DEDA; --blue: #2B6CB8; --blue-ink: #FFFFFF;
+    --yellow: #F2C21B; --yellow-ink: #26313F; --good: #3E8E5A; --bad: #C4504F;
+    --bad-bg: #F7E3E2; --key-bg: #FFFFFF; --key-edge: #C8CFC9;
+    --shadow: 0 1px 2px rgba(29,40,54,.06), 0 4px 14px rgba(29,40,54,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0F1621; --surface: #17202D; --surface-2: #1E2937; --ink: #E8ECF1;
+    --muted: #8C9AAD; --line: #2A3646; --blue: #5C97D6; --blue-ink: #0F1621;
+    --yellow: #F2C21B; --yellow-ink: #10161F; --good: #5FB380; --bad: #E07A79;
+    --bad-bg: #3A2426; --key-bg: #202B3A; --key-edge: #34435A;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 14px rgba(0,0,0,.25);
+  }
+  /* finger color coding — same hues in both themes */
+  :root {
+    --f-pinky: #D16F94;
+    --f-ring: #9A76D8;
+    --f-middle: #3AA893;
+    --f-index: #E09742;
+    --f-thumb: #7E8B99;
+  }
+  .f-pinky  { --fc: var(--f-pinky); }
+  .f-ring   { --fc: var(--f-ring); }
+  .f-middle { --fc: var(--f-middle); }
+  .f-index  { --fc: var(--f-index); }
+  .f-thumb  { --fc: var(--f-thumb); }
+
+  * { box-sizing: border-box; }
+  .card, .board-wrap, .tabs, .stats, .insights .pairkeys {
+    -webkit-user-select: none; user-select: none;
+  }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Avenir Next", Avenir, "Helvetica Neue", system-ui, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 18px 20px 48px; }
+
+  header { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; }
+  h1 { font-size: 1.4rem; font-weight: 600; margin: 0; letter-spacing: .01em; }
+  h1 .dot { color: var(--yellow); }
+  .sub { color: var(--muted); font-size: .85rem; }
+
+  /* ---- two-column layout ---- */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 16px;
+    align-items: start;
+  }
+  .main-col { min-width: 0; }
+  .side-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  @media (max-width: 1200px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  /* ---- mode tabs ---- */
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 0 auto; }
+  .tab {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font: inherit;
+    font-size: .875rem;
+    cursor: pointer;
+  }
+  .tab:hover { border-color: var(--blue); }
+  .tab[aria-selected="true"] {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: var(--blue-ink);
+    font-weight: 600;
+  }
+  .tab:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--yellow);
+    outline-offset: 2px;
+  }
+
+  /* ---- typing card ---- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 20px 26px 14px;
+    cursor: text;
+  }
+  .card.unfocused { opacity: .75; }
+  .card .prompt-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .prompt {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 2.15rem;
+    line-height: 1.75;
+    letter-spacing: .02em;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 3.6em;
+  }
+  .prompt span { border-radius: 4px; padding: 2px 0; }
+  .prompt .done { color: var(--good); }
+  .prompt .err  { color: var(--bad); background: var(--bad-bg); text-decoration: underline; text-decoration-color: var(--bad); }
+  .prompt .cur  { background: var(--yellow); color: var(--yellow-ink); }
+  .prompt .pending { color: var(--muted); }
+  .prompt .todo { color: var(--muted); }
+
+  .focus-note { color: var(--muted); font-size: .8rem; margin-top: 8px; }
+  .focus-note kbd {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: .75rem;
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 0 5px;
+    background: var(--surface-2);
+  }
+
+  #ghost {
+    position: absolute; opacity: 0; pointer-events: none;
+    width: 1px; height: 1px; left: -9999px;
+  }
+
+  /* ---- stats ---- */
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .stat .label {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--muted); font-weight: 600;
+  }
+  .stat .value {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem; font-weight: 600;
+  }
+
+  /* ---- insights ---- */
+  .insights {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .ins-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-weight: 600; font-size: .95rem; margin-bottom: 10px;
+  }
+  .ins-body { display: flex; flex-direction: column; gap: 10px; }
+  .ins-empty { color: var(--muted); font-size: .88rem; }
+  .ins { display: flex; align-items: flex-start; gap: 10px; }
+  .pairkeys { display: flex; align-items: center; gap: 5px; flex-shrink: 0; margin-top: 2px; }
+  .pairkeys .k {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    width: 30px; height: 30px; border-radius: 7px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .95rem; font-weight: 700;
+    border: 1px solid var(--key-edge);
+  }
+  .pairkeys .want { background: var(--yellow); color: var(--yellow-ink); border-color: var(--yellow); }
+  .pairkeys .got { background: var(--bad-bg); color: var(--bad); }
+  .pairkeys .arr { color: var(--muted); }
+  .ins .txt { font-size: .85rem; line-height: 1.45; }
+  .ins .txt em {
+    font-style: normal; font-weight: 700; color: var(--blue);
+    letter-spacing: .02em;
+  }
+  .rl-body { display: flex; flex-direction: column; gap: 2px; }
+  .rl-body .ins-empty { padding: 2px 0; }
+  .rl-body a {
+    display: block; font-size: .85rem; color: var(--blue);
+    text-decoration: none; padding: 3px 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rl-body a:hover { text-decoration: underline; }
+  .stat .value small { font-size: .75rem; color: var(--muted); font-weight: 400; }
+
+  /* ---- coordinate bar (above the keys) ---- */
+  .coordbar {
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    min-height: 66px; padding: 0 0 10px;
+  }
+  .cgroup { display: flex; align-items: flex-start; gap: 10px; }
+  .cchip { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .cchip .cv {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--key-bg);
+    border: 1px solid var(--key-edge);
+    border-bottom-width: 3px;
+    border-radius: 7px;
+    min-width: 42px; height: 42px;
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 10px;
+    font-size: 1.15rem; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .cchip.mod .cv { color: var(--blue); }
+  .cchip.f-pinky .cv, .cchip.f-ring .cv, .cchip.f-middle .cv, .cchip.f-index .cv, .cchip.f-thumb .cv {
+    border-bottom-color: var(--fc);
+    background: color-mix(in srgb, var(--fc) 12%, var(--key-bg));
+  }
+  .cchip .cl {
+    font-size: .6rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); font-weight: 600;
+  }
+  .coordbar .note { color: var(--muted); font-size: .8rem; align-self: center; }
+
+  /* ---- custom text panel ---- */
+  .custom-panel {
+    margin-top: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+  }
+  .cp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .cp-title { font-weight: 600; font-size: .95rem; }
+  .cp-text {
+    width: 100%; min-height: 96px; resize: vertical;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .9rem; line-height: 1.5;
+    color: var(--ink); background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .cp-text:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+  .cp-msg { color: var(--muted); font-size: .8rem; min-height: 1.1em; margin-top: 8px; }
+  .cp-msg.ok { color: var(--good); }
+
+  /* ---- headline source panel ---- */
+  .feed-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .feed-url {
+    flex: 1; min-width: 240px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .85rem;
+    color: var(--ink); background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 10px;
+  }
+  .feed-url:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+
+  /* ---- keyboard board ---- */
+  .board-wrap {
+    position: relative;
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 22px 16px 14px;
+    overflow-x: auto;
+  }
+  .board-fit { margin: 8px auto 0; }
+  .board { position: relative; transform-origin: top left; }
+  .key {
+    position: absolute;
+    width: 58px; height: 58px;
+    background: var(--key-bg);
+    border: 1px solid var(--key-edge);
+    border-bottom-width: 3px;
+    border-radius: 8px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; font-weight: 600;
+    --kt: translate(0, 0);
+    transform: var(--kt);
+    transition: background .08s, transform .08s;
+  }
+  @media (prefers-reduced-motion: reduce) { .key { transition: none; } }
+  .key .s {
+    position: absolute; top: 4px; left: 7px;
+    font-size: .66rem; font-weight: 500; color: var(--muted);
+  }
+  .key .o {
+    position: absolute; bottom: 4px; right: 7px;
+    font-size: .66rem; font-weight: 600; color: var(--blue);
+  }
+  .key.mutedkey { color: var(--muted); font-size: .95rem; font-weight: 500; background: var(--surface-2); }
+  .key.softkey { border-style: dashed; }
+  .key.f-pinky, .key.f-ring, .key.f-middle, .key.f-index, .key.f-thumb {
+    border-bottom-color: var(--fc);
+    background: color-mix(in srgb, var(--fc) 10%, var(--key-bg));
+  }
+  .key.hit {
+    background: var(--yellow); color: var(--yellow-ink);
+    border-color: var(--yellow);
+    transform: var(--kt) translateY(1px) scale(1.08);
+    z-index: 1;
+  }
+  .key.hit .s, .key.hit .o { color: var(--yellow-ink); }
+  .key.miss {
+    background: var(--bad); border-color: var(--bad); color: #fff;
+    transform: var(--kt) translateY(1px);
+    z-index: 2;
+  }
+  .key.miss .s, .key.miss .o { color: rgba(255, 255, 255, .85); }
+  .key .dir {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--bad); border-radius: 7px; color: #fff;
+  }
+  .key .dir .darrow { font-size: 1.7rem; font-weight: 700; line-height: 1; }
+  .key .dir .dmods { font-size: .7rem; font-weight: 700; line-height: 1.2; letter-spacing: .04em; }
+  .key .dir .dmods.solo { font-size: 1.1rem; }
+  .bigdir {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 5;
+    opacity: 0; transform: scale(.85);
+    transition: opacity .12s, transform .12s;
+    color: var(--bad);
+    text-shadow: 0 0 6px var(--bg), 0 0 18px var(--bg), 0 2px 24px var(--bg);
+  }
+  .bigdir.show { opacity: .95; transform: scale(1); }
+  @media (prefers-reduced-motion: reduce) { .bigdir { transition: none; transform: none; } }
+  .bigdir .ba { font-size: 9rem; font-weight: 700; line-height: 1; }
+  .bigdir .bm { font-size: 2.2rem; font-weight: 700; letter-spacing: .05em; }
+  .board-note { color: var(--muted); font-size: .78rem; text-align: center; margin: 12px 0 0; }
+  .finger-legend {
+    display: flex; justify-content: center; align-items: center;
+    gap: 16px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .finger-legend .fl { display: inline-flex; align-items: center; gap: 6px; }
+  .finger-legend .fl::before {
+    content: ""; width: 11px; height: 11px; border-radius: 3px;
+    background: var(--fc); flex-shrink: 0;
+  }
+  .linkbtn {
+    font: inherit; color: var(--blue); background: none; border: none;
+    padding: 0; cursor: pointer; text-decoration: underline;
+  }
+  .layoutsel {
+    font: inherit; font-size: .85rem;
+    color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 4px 8px;
+  }
+  .board-bar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+    padding: 0 8px 14px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 14px;
+    font-size: .85rem; color: var(--muted);
+  }
+  .bb-item { display: inline-flex; align-items: center; gap: 8px; }
+  .board-bar .linkbtn { margin-left: auto; }
+  #filePick { font-size: .78rem; color: var(--muted); max-width: 230px; }
+  #importMsg { margin-left: auto; font-size: .78rem; }
+  .btn {
+    font: inherit; font-size: .85rem; font-weight: 600;
+    color: var(--blue); background: var(--surface);
+    border: 1px solid var(--blue); border-radius: 8px;
+    padding: 5px 14px; cursor: pointer;
+  }
+  .btn:hover { background: var(--blue); color: var(--blue-ink); }
+  .board-note .optnote { color: var(--blue); font-weight: 600; }
+
+  /* ---- results flash ---- */
+  .result {
+    font-size: .85rem; color: var(--muted); min-height: 1.3em; padding: 0 2px;
+  }
+  .result strong { color: var(--ink); }
+  .result .pb { color: var(--good); font-weight: 600; }
+
+  /* ---- cheatsheet ---- */
+  details {
+    margin-top: 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  summary {
+    cursor: pointer; padding: 14px 20px; font-weight: 600; font-size: .95rem;
+    list-style: none; display: flex; align-items: center; gap: 10px;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--blue); transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  @media (prefers-reduced-motion: reduce) {
+    summary::before { transition: none; }
+  }
+  .sheet { padding: 4px 20px 22px; }
+  .sheet h3 {
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--muted); margin: 18px 0 10px;
+  }
+  .sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .chip {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 7px 10px;
+  }
+  .chip .ch {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 1.1rem; font-weight: 700;
+    width: 30px; height: 30px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  }
+  .chip .how {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: .82rem; color: var(--muted);
+  }
+  .chip .how b { color: var(--blue); font-weight: 600; }
+  .sheet p.tip { color: var(--muted); font-size: .82rem; margin: 10px 0 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Tangent<span class="dot">.</span></h1>
+    <span class="sub">Glove80 typing trainer</span>
+    <div class="tabs" role="tablist" id="tabs"></div>
+  </header>
+
+  <div class="layout">
+  <div class="main-col">
+  <div class="card" id="card">
+    <div class="prompt-scroll"><div class="prompt mono" id="prompt" aria-live="off"></div></div>
+    <div class="focus-note" id="focusNote">Click here and start typing · end each line with <kbd>␣</kbd> · <kbd>⌫</kbd> corrects · <kbd>esc</kbd> restarts</div>
+  </div>
+  <input id="ghost" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Typing input">
+
+  <div class="custom-panel" id="feedPanel" hidden>
+    <div class="cp-head">
+      <span class="cp-title">Headline source</span>
+    </div>
+    <div class="feed-row">
+      <select id="feedSel" class="layoutsel">
+        <option value="hn">Hacker News</option>
+        <option value="rss">RSS feed…</option>
+      </select>
+      <input id="feedUrl" class="feed-url" type="url" placeholder="https://example.com/feed.xml" spellcheck="false" hidden>
+      <button class="btn" id="feedLoad" hidden>Load</button>
+    </div>
+    <div class="cp-msg" id="feedMsg"></div>
+  </div>
+
+  <div class="custom-panel" id="customPanel" hidden>
+    <div class="cp-head">
+      <span class="cp-title">Your text</span>
+      <button class="btn" id="copyPromptBtn">Copy LLM prompt</button>
+    </div>
+    <textarea id="customText" class="cp-text mono" placeholder="Paste text here — one line per drill.&#10;&#10;Tip: click “Copy LLM prompt”, paste it into ChatGPT / Claude / any LLM, then paste the reply back here."></textarea>
+    <div class="cp-msg" id="customMsg"></div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board-bar">
+      <label class="bb-item">Keymap
+        <select id="keymapSel" class="layoutsel" title="Standard Glove80 layouts, or import a MoErgo Layout Editor JSON export / ZMK .keymap file"></select>
+      </label>
+      <label class="bb-item">OS input
+        <select id="layoutSel" class="layoutsel" title="The input source your OS is set to — it turns key codes into characters. Detected automatically from imported Layout Editor files."></select>
+      </label>
+      <label class="bb-item">Text
+        <select id="textSel" class="layoutsel" title="Language of the generated practice lines"></select>
+      </label>
+      <input type="file" id="filePick" accept=".json,.keymap,.txt,.dtsi" hidden>
+      <span class="bb-item" id="importMsg"></span>
+    </div>
+    <div class="coordbar">
+      <span class="cgroup" id="coordText"></span>
+    </div>
+    <div class="board-fit" id="boardFit"><div class="board" id="board"></div></div>
+    <p class="board-note" id="boardNote">Key legends: base character in the middle · shift symbol top-left · <span class="optnote">⌥ symbol bottom-right</span></p>
+    <p class="board-note finger-legend" aria-hidden="true">Finger:
+      <span class="fl f-pinky">pinky</span>
+      <span class="fl f-ring">ring</span>
+      <span class="fl f-middle">middle</span>
+      <span class="fl f-index">index</span>
+      <span class="fl f-thumb">thumb</span>
+    </p>
+    <div class="bigdir" id="bigDir" aria-hidden="true"></div>
+  </div>
+  </div>
+
+  <aside class="side-col">
+    <div class="stats">
+      <div class="stat"><div class="label">Speed</div><div class="value" id="wpm">–<small> wpm</small></div></div>
+      <div class="stat"><div class="label">Accuracy</div><div class="value" id="acc">–<small> %</small></div></div>
+      <div class="stat"><div class="label">Lines done</div><div class="value" id="lines">0</div></div>
+      <div class="stat"><div class="label">Best</div><div class="value" id="best">–<small> wpm</small></div></div>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <div class="insights">
+      <div class="ins-head">Insights — your problem keys
+        <button class="linkbtn" id="insReset">reset stats</button>
+      </div>
+      <div class="ins-body" id="insBody"></div>
+    </div>
+
+    <div class="insights">
+      <div class="ins-head">Reading list
+        <button class="linkbtn" id="rlClear">clear</button>
+      </div>
+      <div class="rl-body" id="rlBody"></div>
+    </div>
+  </aside>
+  </div>
+
+  <details id="sheet">
+    <summary>Layout cheat sheet</summary>
+    <div class="sheet" id="sheetBody"></div>
+  </details>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------- drill content ---------------- */
+
+const AAO_WORDS = [
+  "på","så","går","år","från","då","håll","språk","måste","början",
+  "här","där","när","väl","själv","kärlek","vänner","längre","ändå","hälsa",
+  "över","höst","möte","större","fönster","grönsaker","kök","sjö","björk","mörk",
+  "förstå","berätta","människa","kanske","väldigt","område","förändring","trädgård",
+  "månad","fråga","svår","sång","kläder","fika","lagom","midsommar","jordgubbar",
+  "smörgås","räksmörgås","köpa","söka","höra","låta","stänga","öppna","tänka","må"
+];
+
+const COMMON_WORDS = [
+  "och","att","det","som","en","jag","har","vi","med","för","inte","den",
+  "till","av","om","ett","men","de","var","sig","kan","man","hade","skulle",
+  "kommer","mycket","också","bara","eller","vad","alla","sedan","kunde","något",
+  "mellan","utan","genom","arbete","tiden","dag","nu","ska","hur","vill","bra",
+  "hem","se","gör","får","vet","nya","stora","under","efter","andra","första"
+];
+
+const SYMBOL_LINES = [
+  "const arr = [1, 2, 3];",
+  "if (a !== b) { return null; }",
+  "markus@molnify.com",
+  "echo $PATH | grep \"bin\"",
+  "npm install --save-dev @types/node",
+  "cd ~/dotfiles && git push",
+  "SELECT * FROM users WHERE id = 42;",
+  "price: 40 € ($45) + 25% moms",
+  "map[key] = { value: 100 };",
+  "a < b && b > c || !d",
+  "path\\to\\file # windows :(",
+  "curl -s https://api.se/v1?q=hej",
+  "let x = `sum: ${a + b}`;",
+  "grep -rn \"TODO\" src/ | wc -l",
+  "chmod 755 ./deploy.sh && ./run",
+  "{ \"name\": \"glove80\", \"keys\": 80 }"
+];
+
+const STOIC_QUOTES = [
+  "Du har makt över ditt sinne, inte över yttre händelser.",
+  "Vi lider oftare i fantasin än i verkligheten.",
+  "Ingen människa är fri som inte är herre över sig själv.",
+  "Livet är långt, om du vet hur du ska använda det.",
+  "Den bästa hämnden är att inte likna den som gjorde dig illa.",
+  "Börja genast leva, och räkna varje dag som ett liv i sig.",
+  "Svårigheter visar vad människor går för.",
+  "Allt vi hör är en åsikt, inte ett faktum.",
+  "Rikedom består inte i att äga mycket, utan i att behöva lite.",
+  "Tänk inte på vad du saknar, utan på vad du har.",
+  "Ödet leder den villige, men släpar den ovillige.",
+  "Var och en förlorar bara det liv han lever nu.",
+  "Om det inte är rätt, gör det inte; är det inte sant, säg det inte.",
+  "Det är inte det som händer dig som avgör, utan hur du svarar.",
+  "Hur länge tänker du vänta innan du kräver det bästa av dig själv?",
+  "En ädelsten poleras inte utan friktion, en människa inte utan prövningar.",
+  "Det som står i vägen blir vägen.",
+  "Ingen vind är gynnsam för den som inte vet vilken hamn han söker.",
+  "Säg först till dig själv vad du vill vara; gör sedan vad du måste.",
+  "Lycka och frihet börjar med att förstå vad som ligger i din makt.",
+  "Själen färgas av tankarnas färg.",
+  "Det mesta av det vi säger och gör är inte nödvändigt.",
+  "Gräv inom dig; där finns källan till allt gott.",
+  "Vill du bli rik, minska dina begär.",
+  "Det är inte tingen som plågar oss, utan våra åsikter om dem.",
+  "Gör varje handling som om den vore din sista.",
+  "Tiden är en flod av händelser, och strömmen är strid.",
+  "Uthärda och försaka.",
+  "Ingen blir vis av en slump.",
+  "Den som fruktar döden gör inget som är värdigt en levande människa."
+];
+
+const SENTENCES = [
+  "Flygande bäckasiner söka hwila på mjuka tuvor.",
+  "Yxskaftbud, ge vår WC-zonmö IQ-hjälp.",
+  "Öva långsamt och noggrant, så kommer farten av sig själv.",
+  "Fikat står på bordet: kaffe, bullar och en räksmörgås."
+];
+
+const EN_COMMON = [
+  "the","and","that","have","for","not","with","you","this","but","his","from",
+  "they","say","her","she","will","one","all","would","there","their","what",
+  "out","about","who","get","which","when","make","can","like","time","just",
+  "him","know","take","people","into","year","your","good","some","could",
+  "them","see","other","than","then","now","look","only","come","its","over",
+  "think","also","back","after","use","two","how","our","work","first","well"
+];
+
+const EN_QUOTES = [
+  "You have power over your mind, not outside events.",
+  "We suffer more often in imagination than in reality.",
+  "What stands in the way becomes the way.",
+  "Waste no more time arguing about what a good man should be. Be one.",
+  "How long are you going to wait before you demand the best for yourself?",
+  "No man is free who is not master of himself.",
+  "Wealth consists not in having great possessions, but in having few wants.",
+  "It is not things that disturb us, but our opinions about them.",
+  "Begin at once to live, and count each separate day as a separate life.",
+  "Difficulties show what men are.",
+  "Everything we hear is an opinion, not a fact.",
+  "The best revenge is to be unlike him who performed the injury.",
+  "If it is not right, do not do it; if it is not true, do not say it.",
+  "Life is long if you know how to use it.",
+  "The soul becomes dyed with the color of its thoughts.",
+  "Dig within; there lies the well-spring of good.",
+  "Do every act of your life as though it were your last.",
+  "Time is a river of passing events, and strong is its current.",
+  "No man was ever wise by chance.",
+  "Luck is what happens when preparation meets opportunity."
+];
+
+const EN_SENTENCES = [
+  "The quick brown fox jumps over the lazy dog.",
+  "Pack my box with five dozen liquor jugs.",
+  "Sphinx of black quartz, judge my vow.",
+  "Practice slowly and accurately; speed will follow."
+];
+
+const DE_UMLAUT_WORDS = [
+  "über","schön","müssen","hören","können","ändern","fühlen","glück","tür",
+  "grün","früh","spät","müde","dünn","süß","heiß","weiß","straße","fußball",
+  "nördlich","östlich","königin","männer","mädchen","gefährlich","erzählen",
+  "ungefähr","größe","natürlich","tatsächlich","französisch","verrückt"
+];
+
+const DE_COMMON = [
+  "der","die","das","und","ist","ich","nicht","sie","es","ein","auch","auf",
+  "mit","sich","wir","aber","haben","werden","kann","nach","wenn","oder",
+  "noch","wie","für","aus","bei","nur","dann","schon","mehr","sehr","zeit",
+  "gut","jahr","zwei","mensch","leben","arbeit","zwischen","während"
+];
+
+const DE_QUOTES = [
+  "Wir leiden öfter in der Vorstellung als in der Wirklichkeit.",
+  "Was im Weg steht, wird zum Weg.",
+  "Niemand ist frei, der nicht Herr über sich selbst ist.",
+  "Es sind nicht die Dinge, die uns beunruhigen, sondern unsere Meinungen über sie.",
+  "Das Leben ist lang, wenn du es zu nutzen weißt.",
+  "Beginne sofort zu leben, und zähle jeden Tag als ein eigenes Leben.",
+  "Schwierigkeiten zeigen, was Menschen sind.",
+  "Alles, was wir hören, ist eine Meinung, keine Tatsache.",
+  "Die Seele nimmt die Farbe ihrer Gedanken an.",
+  "Grabe in dir; dort liegt die Quelle des Guten.",
+  "Niemand wurde je durch Zufall weise.",
+  "Wenn es nicht richtig ist, tu es nicht; wenn es nicht wahr ist, sag es nicht."
+];
+
+const DE_SENTENCES = [
+  "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern.",
+  "Zwölf Boxkämpfer jagen Viktor quer über den großen Sylter Deich.",
+  "Übe langsam und genau, die Geschwindigkeit kommt von selbst."
+];
+
+const NO_LETTER_WORDS = [
+  "blåbær","kjærlighet","særlig","være","først","høst","måned","språk","sjø",
+  "grønn","kjøre","dør","fødselsdag","ærlig","søndag","lørdag","råd","kjøkken",
+  "brød","smør","øl","så","på","år","gå","stå","få","nå","øy","mørk"
+];
+const NO_COMMON = [
+  "og","jeg","det","er","du","ikke","som","på","de","med","han","av","vi",
+  "til","seg","men","et","har","om","så","kan","der","hva","skal","ut",
+  "være","kom","noen","hele","hvor","etter","bare","også","mye","godt"
+];
+const NO_QUOTES = [
+  "Vi lider oftere i fantasien enn i virkeligheten.",
+  "Det som står i veien, blir veien.",
+  "Ingen er fri som ikke er herre over seg selv.",
+  "Livet er langt om du vet å bruke det.",
+  "Vanskeligheter viser hva folk er laget av.",
+  "Alt vi hører er en mening, ikke et faktum.",
+  "Sjelen farges av tankene dine.",
+  "Begynn å leve nå, og regn hver dag som et helt liv."
+];
+const NO_SENTENCES = [
+  "Høvdingens kjære squaw får litt pizza i Mexico by.",
+  "Øv langsomt og nøyaktig, så kommer farten av seg selv."
+];
+
+const DA_LETTER_WORDS = [
+  "æble","måske","kærlighed","brød","smør","øl","gå","år","blå","grøn",
+  "køkken","dør","fødselsdag","søndag","lørdag","råd","høst","sprog","ærlig",
+  "først","kød","sø","må","så","nå","stå","få","københavn","øje","mørk"
+];
+const DA_COMMON = [
+  "og","jeg","det","er","du","ikke","at","en","den","til","af","han","vi",
+  "med","om","så","kan","der","hvad","skal","ud","være","kom","hele","hvor",
+  "men","har","sig","efter","bare","også","meget","godt","nu"
+];
+const DA_QUOTES = [
+  "Vi lider oftere i fantasien end i virkeligheden.",
+  "Det, der står i vejen, bliver vejen.",
+  "Ingen er fri, som ikke er herre over sig selv.",
+  "Livet er langt, hvis du ved, hvordan du bruger det.",
+  "Vanskeligheder viser, hvad mennesker er gjort af.",
+  "Alt, hvad vi hører, er en mening, ikke en kendsgerning.",
+  "Sjælen farves af dine tanker.",
+  "Begynd at leve nu, og regn hver dag for et helt liv."
+];
+const DA_SENTENCES = [
+  "Quizdeltagerne spiste jordbær med fløde, mens cirkusklovnen Walther spillede på xylofon.",
+  "Øv langsomt og præcist, så kommer farten af sig selv."
+];
+
+const FR_LETTER_WORDS = [
+  "école","élève","mère","père","frère","très","après","déjà","voilà","ça",
+  "garçon","français","légère","répéter","préférer","créé","idée","année",
+  "journée","cinéma","café","thé","où","été","général","préciser","vérité"
+];
+const FR_COMMON = [
+  "le","la","les","de","un","une","et","est","en","que","il","elle","nous",
+  "vous","dans","pour","sur","avec","pas","ne","je","tu","son","ses","mais",
+  "ou","si","tout","bien","plus","comme","faire","dire","voir","temps"
+];
+const FR_QUOTES = [
+  "Nous souffrons plus souvent en imagination qu'en réalité.",
+  "Ce qui barre la route fait faire du chemin.",
+  "Nul n'est libre s'il n'est pas maître de soi.",
+  "La vie est longue si l'on sait en user.",
+  "Les difficultés montrent ce que valent les hommes.",
+  "Tout ce que nous entendons est une opinion, non un fait.",
+  "L'âme se teinte de la couleur de ses pensées.",
+  "Commence à vivre dès maintenant."
+];
+const FR_SENTENCES = [
+  "Portez ce vieux whisky au juge blond qui fume.",
+  "Entraîne-toi lentement, la vitesse viendra."
+];
+
+const ES_LETTER_WORDS = [
+  "año","niño","señor","mañana","español","pequeño","montaña","sueño",
+  "enseñar","compañero","corazón","canción","razón","según","también",
+  "después","así","aquí","más","café","teléfono","médico","rápido","fácil",
+  "difícil","música","página","número"
+];
+const ES_COMMON = [
+  "el","la","los","las","de","un","una","y","es","en","que","no","se","por",
+  "con","para","su","al","lo","como","más","pero","sus","le","ya","este",
+  "porque","muy","sin","sobre","también","hasta","donde","desde"
+];
+const ES_QUOTES = [
+  "Sufrimos más en la imaginación que en la realidad.",
+  "Lo que estorba el camino se convierte en el camino.",
+  "Nadie es libre si no es dueño de sí mismo.",
+  "La vida es larga si sabes usarla.",
+  "Las dificultades muestran lo que son los hombres.",
+  "Todo lo que oímos es una opinión, no un hecho.",
+  "El alma se tiñe del color de sus pensamientos.",
+  "Empieza a vivir ahora mismo."
+];
+const ES_SENTENCES = [
+  "El veloz murciélago hindú comía feliz cardillo y kiwi.",
+  "Practica despacio y con precisión; la velocidad llega sola."
+];
+
+const PACKS = {
+  sv: { lettersLabel: "åäö focus", lettersWords: AAO_WORDS, commonWords: COMMON_WORDS, quotes: STOIC_QUOTES, sentences: SENTENCES },
+  en: { lettersLabel: "Common words", lettersWords: EN_COMMON, commonWords: EN_COMMON, quotes: EN_QUOTES, sentences: EN_SENTENCES },
+  de: { lettersLabel: "üöäß focus", lettersWords: DE_UMLAUT_WORDS, commonWords: DE_COMMON, quotes: DE_QUOTES, sentences: DE_SENTENCES },
+  no: { lettersLabel: "æøå focus", lettersWords: NO_LETTER_WORDS, commonWords: NO_COMMON, quotes: NO_QUOTES, sentences: NO_SENTENCES },
+  da: { lettersLabel: "æøå focus", lettersWords: DA_LETTER_WORDS, commonWords: DA_COMMON, quotes: DA_QUOTES, sentences: DA_SENTENCES },
+  fr: { lettersLabel: "Accents focus", lettersWords: FR_LETTER_WORDS, commonWords: FR_COMMON, quotes: FR_QUOTES, sentences: FR_SENTENCES },
+  es: { lettersLabel: "ñ & accents", lettersWords: ES_LETTER_WORDS, commonWords: ES_COMMON, quotes: ES_QUOTES, sentences: ES_SENTENCES }
+};
+
+const LANG_NAMES = {
+  sv: "Swedish", en: "English", de: "German", no: "Norwegian",
+  da: "Danish", fr: "French", es: "Spanish"
+};
+
+// language of the generated lines: explicit choice, or follow the OS input source
+let textLang = localStorage.getItem("tangent-textlang") || "auto";
+function effLang() {
+  return (textLang !== "auto" && PACKS[textLang]) ? textLang : LAYOUTS[osLayout].lang;
+}
+function pack() { return PACKS[effLang()]; }
+
+/* ---------------- international-keys mode ----------------
+   The drill targets the layout's dedicated non-ASCII letter keys
+   (åäö on Swedish, üöäß on German, éèçàù on French, …), read straight
+   off the keys of the active board rather than hardcoded per language. */
+
+function layoutIntlChars() {
+  const out = [];
+  const seen = new Set();
+  keyGlyphs.forEach(g => {
+    if (!g || seen.has(g.b)) return;
+    seen.add(g.b);
+    if (/^[à-öø-ÿß]$/.test(g.b)) out.push(g.b); // non-ASCII Latin-1 letters (not º ª ÷)
+  });
+  return out;
+}
+
+function intlLabel() {
+  const chars = layoutIntlChars()
+    .sort((a, b) => a.localeCompare(b, LAYOUTS[osLayout].lang));
+  return chars.length ? chars.join("") + " focus" : pack().lettersLabel;
+}
+
+function genIntl() {
+  const chars = layoutIntlChars();
+  const p = pack();
+  if (!chars.length) return pickWords(p.lettersWords, 7);
+  const pool = [...new Set([
+    ...p.lettersWords, ...p.commonWords,
+    ...p.quotes.flatMap(s => s.toLowerCase().split(/[^\p{L}]+/u)),
+    ...p.sentences.flatMap(s => s.toLowerCase().split(/[^\p{L}]+/u))
+  ])].filter(w => w.length > 1 && chars.some(c => w.includes(c)));
+  return pool.length ? pickWords(pool, 7) : pickWords(p.lettersWords, 7);
+}
+
+const MODES = [
+  { id: "hn",      label: () => feedCfg.type === "rss" ? "RSS feed" : "Hacker News", gen: () => genHN() },
+  { id: "text",    label: () => "Normal text",       gen: () => genText() },
+  { id: "symbols", label: () => "Symbols & code",    gen: () => pick(SYMBOL_LINES) },
+  { id: "letters", label: () => intlLabel(),         gen: () => genIntl() },
+  { id: "focus",   label: () => "Weak keys",         gen: () => genFocus() },
+  { id: "custom",  label: () => "Your text",          gen: () => genCustom() }
+];
+
+// mostly stoic wisdom, with pangrams and plain common-word lines sprinkled in
+function genText() {
+  const r = Math.random();
+  if (r < 0.7) return pick(pack().quotes);
+  if (r < 0.85) return pick(pack().sentences);
+  return pickWords(pack().commonWords, 9);
+}
+
+function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+function pickWords(pool, n) {
+  const out = [];
+  while (out.length < n) {
+    const w = pick(pool);
+    if (out[out.length - 1] !== w) out.push(w);
+  }
+  return out.join(" ");
+}
+
+/* ---------------- headlines mode (Hacker News or any RSS/Atom feed) ---------------- */
+
+let feedCfg = { type: "hn", url: "" };
+try { feedCfg = Object.assign(feedCfg, JSON.parse(localStorage.getItem("tangent-feed")) || {}); } catch (e) { /* fresh */ }
+
+let hnQueue = [];
+let hnLoading = false;
+let hnError = false;
+let feedGen = 0; // bumped on source change to void in-flight fetches
+let currentStory = null;
+let prevStory = null;
+let readList = [];
+try { readList = JSON.parse(localStorage.getItem("tangent-readlist")) || []; } catch (e) { /* fresh */ }
+
+function sanitizeHeadline(t) {
+  return t
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, "-")
+    .replace(/×/g, "x")
+    .replace(/…/g, "...")
+    .replace(/ /g, " ")
+    .replace(/[^\x20-\x7EåäöÅÄÖéÉüÜß]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// parse an RSS 2.0 or Atom document into {title, url} stories
+function parseFeedText(text) {
+  const doc = new DOMParser().parseFromString(text, "text/xml");
+  if (doc.querySelector("parsererror")) throw new Error("not valid XML");
+  return [...doc.querySelectorAll("item, entry")].map(it => {
+    const linkEl = it.querySelector("link");
+    const url = linkEl ? (linkEl.getAttribute("href") || linkEl.textContent || "").trim() : "";
+    const titleEl = it.querySelector("title");
+    return { title: sanitizeHeadline(titleEl ? titleEl.textContent : ""), url };
+  }).filter(s => s.title.length >= 8 && s.title.length <= 100);
+}
+
+// direct fetch first (works for feeds that send CORS headers),
+// then rss2json.com, a CORS-enabled feed-to-JSON service, for the rest
+function fetchRss(url) {
+  return fetch(url)
+    .then(r => { if (!r.ok) throw new Error("http " + r.status); return r.text(); })
+    .then(parseFeedText)
+    .catch(() =>
+      fetch("https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(url))
+        .then(r => r.json())
+        .then(j => {
+          if (j.status !== "ok") throw new Error("feed service failed");
+          return (j.items || [])
+            .map(it => ({ title: sanitizeHeadline(it.title || ""), url: it.link || "" }))
+            .filter(s => s.title.length >= 8 && s.title.length <= 100);
+        }));
+}
+
+function loadFeed() {
+  if (hnLoading) return;
+  if (feedCfg.type === "rss" && !feedCfg.url) return;
+  hnLoading = true;
+  const gen = feedGen;
+  const done = list => {
+    if (gen !== feedGen) return; // source changed while fetching
+    hnQueue = list;
+    // shuffle
+    for (let i = hnQueue.length - 1; i > 0; i--) {
+      const j2 = Math.floor(Math.random() * (i + 1));
+      [hnQueue[i], hnQueue[j2]] = [hnQueue[j2], hnQueue[i]];
+    }
+    hnLoading = false;
+    hnError = hnQueue.length === 0;
+    if (mode.id === "hn" && els.ghost.value === "") newLine();
+  };
+  const fail = () => {
+    if (gen !== feedGen) return;
+    hnLoading = false;
+    hnError = true;
+    if (mode.id === "hn" && els.ghost.value === "") newLine();
+  };
+  if (feedCfg.type === "rss") {
+    fetchRss(feedCfg.url).then(done).catch(fail);
+  } else {
+    fetch("https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=30")
+      .then(r => r.json())
+      .then(j => done((j.hits || []).map(h => ({
+        title: sanitizeHeadline(h.title || ""),
+        url: h.url || ("https://news.ycombinator.com/item?id=" + h.objectID)
+      })).filter(s => s.title.length >= 8 && s.title.length <= 100)))
+      .catch(fail);
+  }
+}
+
+function genHN() {
+  if (feedCfg.type === "rss" && !feedCfg.url) {
+    prevStory = currentStory;
+    currentStory = null;
+    return "paste an rss feed url in the panel above, then press load";
+  }
+  if (hnError && !hnQueue.length) {
+    prevStory = currentStory;
+    currentStory = null;
+    return feedCfg.type === "rss"
+      ? "Could not load that feed - check the url and press load to retry"
+      : "Could not load Hacker News - it works in the local file, not the artifact";
+  }
+  if (!hnQueue.length) {
+    loadFeed();
+    prevStory = currentStory;
+    currentStory = null;
+    return "Fetching headlines from " + (feedCfg.type === "rss" ? "the feed" : "Hacker News") + " ...";
+  }
+  prevStory = currentStory;
+  currentStory = hnQueue.shift();
+  if (!hnQueue.length) hnError = false; // queue drained — allow a refetch next time
+  return currentStory.title;
+}
+
+function saveHeadline() {
+  const story = (els.ghost.value.length === 0 && prevStory) ? prevStory : currentStory;
+  if (!story) return;
+  if (!readList.some(s => s.url === story.url)) {
+    readList.push(story);
+    localStorage.setItem("tangent-readlist", JSON.stringify(readList));
+    renderReadList();
+  }
+  els.result.replaceChildren("Saved to reading list: ", makeBold(story.title));
+}
+
+function renderReadList() {
+  const body = document.getElementById("rlBody");
+  body.replaceChildren();
+  if (!readList.length) {
+    const p = document.createElement("div");
+    p.className = "ins-empty";
+    p.textContent = "In Hacker News / RSS mode: press ⏎ during or right after a headline to save its link here — read them once your session is done.";
+    body.appendChild(p);
+    return;
+  }
+  for (const s of readList) {
+    const a = document.createElement("a");
+    a.href = s.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = s.title;
+    a.title = s.title;
+    body.appendChild(a);
+  }
+}
+
+document.getElementById("rlClear").addEventListener("click", () => {
+  readList = [];
+  localStorage.removeItem("tangent-readlist");
+  renderReadList();
+});
+
+/* ---------------- state ---------------- */
+
+const els = {
+  tabs: document.getElementById("tabs"),
+  card: document.getElementById("card"),
+  prompt: document.getElementById("prompt"),
+  ghost: document.getElementById("ghost"),
+  wpm: document.getElementById("wpm"),
+  acc: document.getElementById("acc"),
+  lines: document.getElementById("lines"),
+  best: document.getElementById("best"),
+  coordText: document.getElementById("coordText"),
+  result: document.getElementById("result"),
+  focusNote: document.getElementById("focusNote")
+};
+
+let confusions = {};
+let attempts = {};
+try { confusions = JSON.parse(localStorage.getItem("tangent-confusions")) || {}; } catch (e) { /* fresh */ }
+try { attempts = JSON.parse(localStorage.getItem("tangent-attempts")) || {}; } catch (e) { /* fresh */ }
+
+let mode = MODES[1]; // start in Normal text
+let target = "";
+let startTime = null;
+let keystrokes = 0;     // chars entered (incl. mistakes)
+let wrongStrokes = 0;   // chars that were wrong when first entered
+let prevLen = 0;
+let linesDone = 0;
+let composing = false;
+
+const bestKey = m => "tangent-best-" + m.id;
+function loadBest() {
+  const v = localStorage.getItem(bestKey(mode));
+  els.best.innerHTML = (v ? v : "–") + "<small> wpm</small>";
+}
+
+/* ---------------- tabs ---------------- */
+
+function buildTabs(selectedId) {
+  els.tabs.replaceChildren();
+  for (const m of MODES) {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.setAttribute("role", "tab");
+    b.textContent = m.label();
+    b.setAttribute("aria-selected", m.id === selectedId ? "true" : "false");
+    b.addEventListener("click", () => {
+      mode = m;
+      for (const t of els.tabs.children) t.setAttribute("aria-selected", "false");
+      b.setAttribute("aria-selected", "true");
+      linesDone = 0;
+      els.lines.textContent = "0";
+      els.result.textContent = "";
+      loadBest();
+      updateCustomPanel();
+      newLine();
+      els.ghost.focus();
+    });
+    els.tabs.appendChild(b);
+  }
+}
+
+/* ---------------- line lifecycle ---------------- */
+
+function newLine() {
+  // re-roll lines containing characters this layout can't type on this board
+  let t = mode.gen();
+  for (let i = 0; i < 8; i++) {
+    if ([...t].every(c => c === " " || charKeyMap[c])) break;
+    t = mode.gen();
+  }
+  target = t + " ";
+  startTime = null;
+  keystrokes = 0;
+  wrongStrokes = 0;
+  prevLen = 0;
+  els.ghost.value = "";
+  render("");
+}
+
+function finishLine(typed) {
+  const secs = (performance.now() - startTime) / 1000;
+  let correct = 0;
+  for (let i = 0; i < target.length; i++) if (typed[i] === target[i]) correct++;
+  const wpm = Math.round((correct / 5) / (secs / 60));
+  const acc = keystrokes ? Math.round(100 * (keystrokes - wrongStrokes) / keystrokes) : 100;
+  linesDone++;
+  els.lines.textContent = linesDone;
+  els.wpm.innerHTML = wpm + "<small> wpm</small>";
+  els.acc.innerHTML = acc + "<small> %</small>";
+
+  const prev = Number(localStorage.getItem(bestKey(mode)) || 0);
+  let pb = "";
+  if (acc >= 90 && wpm > prev) {
+    localStorage.setItem(bestKey(mode), wpm);
+    loadBest();
+    pb = ' <span class="pb">new personal best!</span>';
+  }
+  els.result.innerHTML =
+    "Line done: <strong>" + wpm + " wpm</strong> at <strong>" + acc + " %</strong> accuracy." + pb;
+  localStorage.setItem("tangent-confusions", JSON.stringify(confusions));
+  localStorage.setItem("tangent-attempts", JSON.stringify(attempts));
+  renderInsights();
+  newLine();
+}
+
+/* ---------------- rendering ---------------- */
+
+function render(typed) {
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < target.length; i++) {
+    const s = document.createElement("span");
+    s.textContent = target[i];
+    if (i < typed.length) {
+      if (typed[i] === target[i]) s.className = "done";
+      else if (composing && i === typed.length - 1) s.className = "pending";
+      else s.className = "err";
+    } else if (i === typed.length) {
+      s.className = "cur";
+    } else {
+      s.className = "todo";
+    }
+    frag.appendChild(s);
+  }
+  els.prompt.replaceChildren(frag);
+  updateHint(target[typed.length]);
+}
+
+function updateHint(ch) {
+  highlightFor(ch);
+  const out = els.coordText;
+  out.replaceChildren();
+  if (ch === undefined) {
+    out.appendChild(coordNote("fix the end with ⌫, or press enter to move on"));
+    return;
+  }
+  const m = charKeyMap[ch];
+  if (!m) {
+    out.appendChild(coordNote("not on this keymap"));
+    return;
+  }
+  if (m.shift) out.appendChild(coordChip("⇧", "hold", true));
+  if (m.alt) out.appendChild(coordChip("⌥", "hold", true));
+  const c = KEYCOORD[m.idx];
+  if (c) {
+    out.appendChild(coordChip(c.hand, "hand"));
+    const f = fingerOf(m.idx);
+    if (f) out.appendChild(coordChip(f, "finger", false, "f-" + f));
+    if (c.t !== undefined) {
+      out.appendChild(coordChip("T" + c.t, "thumb"));
+    } else {
+      out.appendChild(coordChip("C" + c.c, "col"));
+      out.appendChild(coordChip("R" + c.r, "row"));
+    }
+  }
+  const g = keyGlyphs[m.idx] || {};
+  if (m.then) out.appendChild(coordChip(m.then.toUpperCase(), "then"));
+  else if (g.dead) out.appendChild(coordNote("then space"));
+}
+
+function coordChip(value, label, mod, cls) {
+  const chip = document.createElement("span");
+  chip.className = "cchip" + (mod ? " mod" : "") + (cls ? " " + cls : "");
+  const v = document.createElement("span");
+  v.className = "cv"; v.textContent = value;
+  const l = document.createElement("span");
+  l.className = "cl"; l.textContent = label;
+  chip.append(v, l);
+  return chip;
+}
+
+function coordNote(text) {
+  const n = document.createElement("span");
+  n.className = "note"; n.textContent = text;
+  return n;
+}
+
+/* ---------------- input handling ---------------- */
+
+els.ghost.addEventListener("compositionstart", () => { composing = true; });
+els.ghost.addEventListener("compositionend", () => {
+  composing = false;
+  handleInput();
+});
+
+els.ghost.addEventListener("input", handleInput);
+
+function handleInput() {
+  const typed = els.ghost.value;
+  // keep the caret pinned to the end so edits are always appends
+  if (!composing && els.ghost.selectionStart !== typed.length) {
+    els.ghost.setSelectionRange(typed.length, typed.length);
+  }
+  if (typed.length > 0 && startTime === null) startTime = performance.now();
+
+  if (typed.length > prevLen && !composing) {
+    const i = typed.length - 1;
+    keystrokes++;
+    const exp = target[i];
+    if (exp !== undefined) {
+      attempts[exp] = (attempts[exp] || 0) + 1;
+      if (typed[i] !== exp) {
+        wrongStrokes++;
+        const gots = confusions[exp] = confusions[exp] || {};
+        gots[typed[i]] = (gots[typed[i]] || 0) + 1;
+        flashMiss(typed[i], exp);
+      }
+    } else {
+      wrongStrokes++;
+    }
+  }
+  prevLen = typed.length;
+
+  // line ends on the trailing space — but only once it's typed correctly,
+  // so backspace corrections at the end still work
+  const last = target.length - 1;
+  if (!composing && typed.length >= target.length && typed[last] === target[last] && startTime !== null) {
+    finishLine(typed);
+    return;
+  }
+  render(typed);
+}
+
+const NAV_KEYS = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"];
+els.ghost.addEventListener("keydown", (e) => {
+  if (NAV_KEYS.includes(e.key) || (e.metaKey && e.key.toLowerCase() === "a")) {
+    e.preventDefault();
+    return;
+  }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (mode.id === "hn") {
+      saveHeadline();
+    } else if (els.ghost.value.length > 0 && startTime !== null) {
+      finishLine(els.ghost.value);
+    }
+  } else if (e.key === "Escape") {
+    e.preventDefault();
+    newLine();
+  }
+});
+els.ghost.addEventListener("paste", (e) => e.preventDefault());
+
+els.card.addEventListener("click", () => els.ghost.focus());
+els.ghost.addEventListener("focus", () => {
+  els.card.classList.remove("unfocused");
+  els.focusNote.innerHTML = 'end each line with <kbd>␣</kbd> · <kbd>⌫</kbd> corrects · <kbd>⏎</kbd> skips · <kbd>esc</kbd> restarts';
+});
+els.ghost.addEventListener("blur", () => {
+  els.card.classList.add("unfocused");
+  els.focusNote.innerHTML = 'Click here and start typing · end each line with <kbd>␣</kbd> · <kbd>⌫</kbd> corrects · <kbd>esc</kbd> restarts';
+});
+
+/* ---------------- Glove80 board ---------------- */
+
+// What each ZMK keycode produces under a given OS input source.
+// `dead` marks dead keys (press, then space for the bare symbol).
+function lettersAtoZ() {
+  const k = {};
+  for (let i = 65; i <= 90; i++) {
+    const L = String.fromCharCode(i);
+    k[L] = { b: L.toLowerCase(), cap: L };
+  }
+  return k;
+}
+
+const LAYOUTS = {
+  "sv-mac": {
+    name: "Swedish (macOS)", lang: "sv",
+    keys: Object.assign(lettersAtoZ(), {
+      EQUAL: { b: "´", s: "`", dead: true },
+      MINUS: { b: "+", s: "?" },
+      BSLH:  { b: "'", s: "*" },
+      SEMI:  { b: "ö", cap: "Ö" },
+      SQT:   { b: "ä", cap: "Ä" },
+      LBKT:  { b: "å", cap: "Å" },
+      RBKT:  { b: "¨", s: "^", o: "~", dead: true },
+      GRAVE: { b: "<", s: ">" },
+      NON_US_BSLH: { b: "<", s: ">" },
+      COMMA: { b: ",", s: ";" },
+      DOT:   { b: ".", s: ":" },
+      FSLH:  { b: "-", s: "_" },
+      N1: { b: "1", s: "!" },
+      N2: { b: "2", s: "\"", o: "@" },
+      N3: { b: "3", s: "#" },
+      N4: { b: "4", s: "€", o: "$" },
+      N5: { b: "5", s: "%" },
+      N6: { b: "6", s: "&" },
+      N7: { b: "7", s: "/", o: "|", so: "\\" },
+      N8: { b: "8", s: "(", o: "[", so: "{" },
+      N9: { b: "9", s: ")", o: "]", so: "}" },
+      N0: { b: "0", s: "=" },
+      SPACE: { b: " ", label: "␣" }
+    })
+  },
+  "us": {
+    name: "English (US)", lang: "en",
+    keys: Object.assign(lettersAtoZ(), {
+      EQUAL: { b: "=", s: "+" },
+      MINUS: { b: "-", s: "_" },
+      BSLH:  { b: "\\", s: "|" },
+      SEMI:  { b: ";", s: ":" },
+      SQT:   { b: "'", s: "\"" },
+      LBKT:  { b: "[", s: "{" },
+      RBKT:  { b: "]", s: "}" },
+      GRAVE: { b: "`", s: "~" },
+      COMMA: { b: ",", s: "<" },
+      DOT:   { b: ".", s: ">" },
+      FSLH:  { b: "/", s: "?" },
+      N1: { b: "1", s: "!" },
+      N2: { b: "2", s: "@" },
+      N3: { b: "3", s: "#" },
+      N4: { b: "4", s: "$" },
+      N5: { b: "5", s: "%" },
+      N6: { b: "6", s: "^" },
+      N7: { b: "7", s: "&" },
+      N8: { b: "8", s: "*" },
+      N9: { b: "9", s: "(" },
+      N0: { b: "0", s: ")" },
+      SPACE: { b: " ", label: "␣" }
+    })
+  },
+  "uk-mac": {
+    name: "English (UK, macOS)", lang: "en",
+    keys: Object.assign(lettersAtoZ(), {
+      EQUAL: { b: "=", s: "+" },
+      MINUS: { b: "-", s: "_" },
+      BSLH:  { b: "\\", s: "|" },
+      SEMI:  { b: ";", s: ":" },
+      SQT:   { b: "'", s: "\"" },
+      LBKT:  { b: "[", s: "{" },
+      RBKT:  { b: "]", s: "}" },
+      GRAVE: { b: "§", s: "±" },
+      NON_US_BSLH: { b: "`", s: "~" },
+      COMMA: { b: ",", s: "<" },
+      DOT:   { b: ".", s: ">" },
+      FSLH:  { b: "/", s: "?" },
+      N1: { b: "1", s: "!" },
+      N2: { b: "2", s: "@", o: "€" },
+      N3: { b: "3", s: "£", o: "#" },
+      N4: { b: "4", s: "$" },
+      N5: { b: "5", s: "%" },
+      N6: { b: "6", s: "^" },
+      N7: { b: "7", s: "&" },
+      N8: { b: "8", s: "*" },
+      N9: { b: "9", s: "(" },
+      N0: { b: "0", s: ")" },
+      SPACE: { b: " ", label: "␣" }
+    })
+  },
+  "de-mac": {
+    name: "German (macOS)", lang: "de",
+    keys: Object.assign(lettersAtoZ(), {
+      Y: { b: "z", cap: "Z" },
+      Z: { b: "y", cap: "Y" },
+      E: { b: "e", cap: "E", o: "€" },
+      L: { b: "l", cap: "L", o: "@" },
+      N: { b: "n", cap: "N", o: "~" },
+      EQUAL: { b: "´", s: "`", dead: true },
+      MINUS: { b: "ß", s: "?" },
+      BSLH:  { b: "#", s: "'" },
+      SEMI:  { b: "ö", cap: "Ö" },
+      SQT:   { b: "ä", cap: "Ä" },
+      LBKT:  { b: "ü", cap: "Ü" },
+      RBKT:  { b: "+", s: "*" },
+      GRAVE: { b: "^", s: "°", dead: true },
+      NON_US_BSLH: { b: "<", s: ">" },
+      COMMA: { b: ",", s: ";" },
+      DOT:   { b: ".", s: ":" },
+      FSLH:  { b: "-", s: "_" },
+      N1: { b: "1", s: "!" },
+      N2: { b: "2", s: "\"" },
+      N3: { b: "3", s: "§" },
+      N4: { b: "4", s: "$" },
+      N5: { b: "5", s: "%", o: "[" },
+      N6: { b: "6", s: "&", o: "]" },
+      N7: { b: "7", s: "/", o: "|", so: "\\" },
+      N8: { b: "8", s: "(", o: "{" },
+      N9: { b: "9", s: ")", o: "}" },
+      N0: { b: "0", s: "=" },
+      SPACE: { b: " ", label: "␣" }
+    })
+  }
+};
+
+// Nordic siblings: same symbol map as Swedish, ö/ä swapped for ø/æ
+LAYOUTS["no-mac"] = {
+  name: "Norwegian (macOS)", lang: "no",
+  keys: Object.assign({}, LAYOUTS["sv-mac"].keys, {
+    SEMI: { b: "ø", cap: "Ø" },
+    SQT:  { b: "æ", cap: "Æ" }
+  })
+};
+LAYOUTS["da-mac"] = {
+  name: "Danish (macOS)", lang: "da",
+  keys: Object.assign({}, LAYOUTS["sv-mac"].keys, {
+    SEMI: { b: "æ", cap: "Æ" },
+    SQT:  { b: "ø", cap: "Ø" }
+  })
+};
+LAYOUTS["fr-mac"] = {
+  name: "French (macOS)", lang: "fr",
+  keys: Object.assign(lettersAtoZ(), {
+    Q: { b: "a", cap: "A" }, A: { b: "q", cap: "Q" },
+    W: { b: "z", cap: "Z" }, Z: { b: "w", cap: "W" },
+    SEMI: { b: "m", cap: "M" },
+    M:     { b: ",", s: "?" },
+    COMMA: { b: ";", s: "." },
+    DOT:   { b: ":", s: "/" },
+    FSLH:  { b: "=", s: "+" },
+    N1: { b: "&", s: "1" },
+    N2: { b: "é", s: "2" },
+    N3: { b: "\"", s: "3" },
+    N4: { b: "'", s: "4" },
+    N5: { b: "(", s: "5" },
+    N6: { b: "§", s: "6" },
+    N7: { b: "è", s: "7" },
+    N8: { b: "!", s: "8" },
+    N9: { b: "ç", s: "9" },
+    N0: { b: "à", s: "0" },
+    MINUS: { b: ")", s: "°" },
+    EQUAL: { b: "-", s: "_" },
+    LBKT:  { b: "^", s: "¨", dead: true },
+    RBKT:  { b: "$", s: "*" },
+    SQT:   { b: "ù", s: "%" },
+    BSLH:  { b: "`", s: "£" },
+    GRAVE: { b: "@", s: "#" },
+    NON_US_BSLH: { b: "<", s: ">" },
+    SPACE: { b: " ", label: "␣" }
+  })
+};
+LAYOUTS["es-mac"] = {
+  name: "Spanish (macOS)", lang: "es",
+  keys: Object.assign(lettersAtoZ(), {
+    SEMI:  { b: "ñ", cap: "Ñ" },
+    SQT:   { b: "´", s: "¨", dead: true },
+    BSLH:  { b: "ç", cap: "Ç" },
+    LBKT:  { b: "`", s: "^", dead: true },
+    RBKT:  { b: "+", s: "*" },
+    GRAVE: { b: "º", s: "ª" },
+    NON_US_BSLH: { b: "<", s: ">" },
+    COMMA: { b: ",", s: ";" },
+    DOT:   { b: ".", s: ":" },
+    FSLH:  { b: "-", s: "_" },
+    MINUS: { b: "'", s: "?" },
+    EQUAL: { b: "¡", s: "¿" },
+    N1: { b: "1", s: "!" },
+    N2: { b: "2", s: "\"", o: "@" },
+    N3: { b: "3", s: "·", o: "#" },
+    N4: { b: "4", s: "$" },
+    N5: { b: "5", s: "%" },
+    N6: { b: "6", s: "&" },
+    N7: { b: "7", s: "/", o: "|" },
+    N8: { b: "8", s: "(", o: "{" },
+    N9: { b: "9", s: ")", o: "}" },
+    N0: { b: "0", s: "=" },
+    SPACE: { b: " ", label: "␣" }
+  })
+};
+
+let osLayout = localStorage.getItem("tangent-oslayout") || "sv-mac";
+if (!LAYOUTS[osLayout]) osLayout = "sv-mac";
+
+const MUTED_LABELS = {
+  TAB: "⇥", ESC: "⎋", BSPC: "⌫", DEL: "⌦", RET: "⏎", ENTER: "⏎",
+  LSHFT: "⇧", RSHFT: "⇧", LSHIFT: "⇧", RSHIFT: "⇧",
+  LCTRL: "⌃", RCTRL: "⌃", LALT: "⌥", RALT: "⌥", LGUI: "⌘", RGUI: "⌘",
+  CAPS: "⇪", HOME: "↖", END: "↘", PG_UP: "⇞", PG_DN: "⇟",
+  LEFT: "◀", RIGHT: "▶", UP: "▲", DOWN: "▼",
+  MAGIC: "✦", LOWER: "◆", MO: "◆", LAYER: "◆", NONE: "·", TRANS: "·",
+  KEYPAD: "⬠", SYMNAV: "△"
+};
+for (let i = 1; i <= 12; i++) MUTED_LABELS["F" + i] = "F" + i;
+
+// Standard Glove80 keymaps, extracted from MoErgo's Layout Editor (my.glove80.com)
+const KEYMAPS = {
+  "factory-mac": { name: "Factory default (macOS)", codes: [
+    "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","EQUAL","N1",
+    "N2","N3","N4","N5","N6","N7","N8","N9","N0","MINUS","TAB","Q",
+    "W","E","R","T","Y","U","I","O","P","BSLH","ESC","A",
+    "S","D","F","G","H","J","K","L","SEMI","SQT","GRAVE","Z",
+    "X","C","V","B","LSHFT","LGUI","LOWER","LCTRL","RGUI","RSHFT","N","M",
+    "COMMA","DOT","FSLH","PG_UP","MAGIC","HOME","END","LEFT","RIGHT","BSPC","DEL","LALT",
+    "RALT","RET","SPACE","UP","DOWN","LBKT","RBKT","PG_DN"] },
+  "factory": { name: "Factory default (Win/Linux)", codes: [
+    "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","EQUAL","N1",
+    "N2","N3","N4","N5","N6","N7","N8","N9","N0","MINUS","TAB","Q",
+    "W","E","R","T","Y","U","I","O","P","BSLH","ESC","A",
+    "S","D","F","G","H","J","K","L","SEMI","SQT","GRAVE","Z",
+    "X","C","V","B","LSHFT","LCTRL","LOWER","LGUI","RCTRL","RSHFT","N","M",
+    "COMMA","DOT","FSLH","PG_UP","MAGIC","HOME","END","LEFT","RIGHT","BSPC","DEL","LALT",
+    "RALT","RET","SPACE","UP","DOWN","LBKT","RBKT","PG_DN"] },
+  "colemak": { name: "Colemak", codes: [
+    "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","EQUAL","N1",
+    "N2","N3","N4","N5","N6","N7","N8","N9","N0","MINUS","TAB","Q",
+    "W","F","P","G","J","L","U","Y","SEMI","BSLH","ESC","A",
+    "R","S","T","D","H","N","E","I","O","SQT","GRAVE","Z",
+    "X","C","V","B","LSHFT","LCTRL","LOWER","LGUI","RCTRL","RSHFT","K","M",
+    "COMMA","DOT","FSLH","PG_UP","MAGIC","HOME","END","LEFT","RIGHT","BSPC","DEL","LALT",
+    "RALT","RET","SPACE","UP","DOWN","LBKT","RBKT","PG_DN"] },
+  "colemak-dh": { name: "Colemak-DH", codes: [
+    "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","EQUAL","N1",
+    "N2","N3","N4","N5","N6","N7","N8","N9","N0","MINUS","TAB","Q",
+    "W","F","P","B","J","L","U","Y","SEMI","BSLH","ESC","A",
+    "R","S","T","G","M","N","E","I","O","SQT","GRAVE","Z",
+    "X","C","D","V","LSHFT","LCTRL","LOWER","LGUI","RCTRL","RSHFT","K","H",
+    "COMMA","DOT","FSLH","PG_UP","MAGIC","HOME","END","LEFT","RIGHT","BSPC","DEL","LALT",
+    "RALT","RET","SPACE","UP","DOWN","LBKT","RBKT","PG_DN"] },
+  "dvorak": { name: "Dvorak", codes: [
+    "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","EQUAL","N1",
+    "N2","N3","N4","N5","N6","N7","N8","N9","N0","MINUS","TAB","SQT",
+    "COMMA","DOT","P","Y","F","G","C","R","L","SLASH","ESC","A",
+    "O","E","U","I","D","H","T","N","S","BSLH","GRAVE","SEMI",
+    "Q","J","K","X","LSHFT","LCTRL","LOWER","LGUI","RCTRL","RSHFT","B","M",
+    "W","V","Z","PG_UP","MAGIC","HOME","END","LEFT","RIGHT","BSPC","DEL","LALT",
+    "RALT","RET","SPACE","UP","DOWN","LBKT","RBKT","PG_DN"] },
+  "workman": { name: "Workman", codes: [
+    "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","EQUAL","N1",
+    "N2","N3","N4","N5","N6","N7","N8","N9","N0","MINUS","TAB","Q",
+    "D","R","W","B","J","F","U","P","SEMI","BSLH","ESC","A",
+    "S","H","T","G","Y","N","E","O","I","SQT","GRAVE","Z",
+    "X","M","C","V","LSHFT","LCTRL","LOWER","LGUI","RCTRL","RSHFT","K","L",
+    "COMMA","DOT","FSLH","PG_UP","MAGIC","HOME","END","LEFT","RIGHT","BSPC","DEL","LALT",
+    "RALT","RET","SPACE","UP","DOWN","LBKT","RBKT","PG_DN"] },
+};
+for (const k of Object.values(KEYMAPS)) k.board = "glove80";
+const KEY_ALIASES = { SLASH: "FSLH", LSHIFT: "LSHFT", RSHIFT: "RSHFT", ENTER: "RET" };
+
+
+// Column slots (top→bottom) per half; null = no key in that row slot
+// Function row sits on the OUTER columns (matches the physical Glove80):
+// left F1 over =, right F10 over the outer pinky (- / +).
+const LEFT_COLS = [
+  [0, 10, 22, 34, 46, 64],
+  [1, 11, 23, 35, 47, 65],
+  [2, 12, 24, 36, 48, 66],
+  [3, 13, 25, 37, 49, 67],
+  [4, 14, 26, 38, 50, 68],
+  [null, 15, 27, 39, 51, null]
+];
+const RIGHT_COLS = [
+  [null, 16, 28, 40, 58, null],
+  [5, 17, 29, 41, 59, 75],
+  [6, 18, 30, 42, 60, 76],
+  [7, 19, 31, 43, 61, 77],
+  [8, 20, 32, 44, 62, 78],
+  [9, 21, 33, 45, 63, 79]
+];
+const THUMBS = {
+  leftTop: [52, 53, 54], leftBot: [69, 70, 71],
+  rightTop: [55, 56, 57], rightBot: [72, 73, 74]
+};
+
+/* Exact physical key geometry, transcribed from MoErgo's ZMK firmware
+   (app/boards/arm/glove80/glove80-layouts.dtsi) — the same data the
+   Layout Editor renders from. Units: 100 = one key pitch; every key is
+   100×100. Entry: [x, y, rot(centideg), rx, ry] with (rx,ry) the pivot
+   the thumb keys rotate around. Only the two outer (pinky-side) columns
+   are staggered, half a key lower; the rest of the matrix is flat. */
+const G80_GEOM = [];
+{
+  const LX = [0, 100, 200, 300, 400, 500], RX = [1200, 1300, 1400, 1500, 1600, 1700];
+  const stagL = [50, 50, 0, 0, 0, 0], stagR = [0, 0, 0, 0, 50, 50];
+  // function row: the outer five columns of each half
+  [0, 1, 2, 3, 4].forEach(c => { G80_GEOM[c] = [LX[c], stagL[c]]; });
+  [1, 2, 3, 4, 5].forEach((c, i) => { G80_GEOM[5 + i] = [RX[c], stagR[c]]; });
+  // four full six-key rows
+  const rowL = [10, 22, 34, 46], rowR = [16, 28, 40, 58];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) {
+    G80_GEOM[rowL[r] + c] = [LX[c], 100 + r * 100 + stagL[c]];
+    G80_GEOM[rowR[r] + c] = [RX[c], 100 + r * 100 + stagR[c]];
+  }
+  // bottom row: the outer five columns of each half
+  [0, 1, 2, 3, 4].forEach(c => { G80_GEOM[64 + c] = [LX[c], 500 + stagL[c]]; });
+  [1, 2, 3, 4, 5].forEach((c, i) => { G80_GEOM[75 + i] = [RX[c], 500 + stagR[c]]; });
+  // thumb fans, each key rotated around a pivot under the palm
+  [[52, 3000], [53, 4500], [54, 6000]].forEach(([i, rot]) => { G80_GEOM[i] = [400, 450, rot, 450, 925]; });
+  [[55, -6000], [56, -4500], [57, -3000]].forEach(([i, rot]) => { G80_GEOM[i] = [1300, 450, rot, 1350, 925]; });
+  [[69, 2000], [70, 4000], [71, 6000]].forEach(([i, rot]) => { G80_GEOM[i] = [400, 550, rot, 450, 925]; });
+  [[72, -6000], [73, -4000], [74, -2000]].forEach(([i, rot]) => { G80_GEOM[i] = [1300, 550, rot, 1350, 925]; });
+}
+
+/* ---------------- Go60 board (MoErgo's 60-key split) ----------------
+   ZMK positions 0–59, in firmware order. Columns C2/C3/C4 have a 5th
+   (lower) row; C1/C5/C6 have four. One curved 3-key thumb cluster per hand. */
+const GO60_FACTORY_CODES = [
+  "EQUAL","N1","N2","N3","N4","N5","N6","N7","N8","N9","N0","MINUS",
+  "TAB","Q","W","E","R","T","Y","U","I","O","P","BSLH",
+  "ESC","A","S","D","F","G","H","J","K","L","SEMI","SQT",
+  "MAGIC","Z","X","C","V","B","N","M","COMMA","DOT","FSLH","KEYPAD",
+  "GRAVE","DEL","BSPC","LGUI","LBKT","RBKT",
+  "SYMNAV","LSHFT","LCTRL","LALT","SPACE","RET"
+];
+// column slots top→bottom (null = no key); function-free number row on top
+const GO60_LEFT_COLS = [
+  [0, 12, 24, 36, null],
+  [1, 13, 25, 37, null],
+  [2, 14, 26, 38, 48],
+  [3, 15, 27, 39, 49],
+  [4, 16, 28, 40, 50],
+  [5, 17, 29, 41, null]
+];
+const GO60_RIGHT_COLS = [
+  [6, 18, 30, 42, null],
+  [7, 19, 31, 43, 51],
+  [8, 20, 32, 44, 52],
+  [9, 21, 33, 45, 53],
+  [10, 22, 34, 46, null],
+  [11, 23, 35, 47, null]
+];
+const GO60_THUMBS = { leftTop: [54, 55, 56], leftBot: null, rightTop: [57, 58, 59], rightBot: null };
+
+// Go60 geometry: same conventions as the Glove80 (outer two columns
+// staggered half a key, one fanned thumb arc per hand)
+const GO60_GEOM = [];
+{
+  const stagL = [50, 50, 0, 0, 0, 0], stagR = [0, 0, 0, 0, 50, 50];
+  GO60_LEFT_COLS.forEach((slots, c) => slots.forEach((idx, r) => {
+    if (idx !== null) GO60_GEOM[idx] = [c * 100, r * 100 + stagL[c]];
+  }));
+  GO60_RIGHT_COLS.forEach((slots, c) => slots.forEach((idx, r) => {
+    if (idx !== null) GO60_GEOM[idx] = [1200 + c * 100, r * 100 + stagR[c]];
+  }));
+  [[54, 3000], [55, 4500], [56, 6000]].forEach(([i, rot]) => { GO60_GEOM[i] = [400, 450, rot, 450, 925]; });
+  [[57, -6000], [58, -4500], [59, -3000]].forEach(([i, rot]) => { GO60_GEOM[i] = [1300, 450, rot, 1350, 925]; });
+}
+
+// Build a Go60 code array from a Glove80 keymap by copying its alpha block
+// (3 rows × 10 keys) into the Go60 positions; everything else stays factory.
+const G80_ALPHA = [23,24,25,26,27,28,29,30,31,32, 35,36,37,38,39,40,41,42,43,44, 47,48,49,50,51,58,59,60,61,62];
+const GO60_ALPHA = [13,14,15,16,17,18,19,20,21,22, 25,26,27,28,29,30,31,32,33,34, 37,38,39,40,41,42,43,44,45,46];
+function buildGo60(src) {
+  const out = GO60_FACTORY_CODES.slice();
+  G80_ALPHA.forEach((g, i) => { out[GO60_ALPHA[i]] = src[g]; });
+  return out;
+}
+Object.assign(KEYMAPS, {
+  "go60-factory":    { name: "Go60 · Factory (QWERTY)", board: "go60", codes: GO60_FACTORY_CODES.slice() },
+  "go60-colemak":    { name: "Go60 · Colemak",          board: "go60", codes: buildGo60(KEYMAPS.colemak.codes) },
+  "go60-colemak-dh": { name: "Go60 · Colemak-DH",       board: "go60", codes: buildGo60(KEYMAPS["colemak-dh"].codes) },
+  "go60-dvorak":     { name: "Go60 · Dvorak",           board: "go60", codes: buildGo60(KEYMAPS.dvorak.codes) },
+  "go60-workman":    { name: "Go60 · Workman",          board: "go60", codes: buildGo60(KEYMAPS.workman.codes) }
+});
+
+// board geometry registry; the visible board follows the selected layout
+const BOARDS = {
+  glove80: { leftCols: LEFT_COLS,      rightCols: RIGHT_COLS,      thumbs: THUMBS,      geom: G80_GEOM },
+  go60:    { leftCols: GO60_LEFT_COLS, rightCols: GO60_RIGHT_COLS, thumbs: GO60_THUMBS, geom: GO60_GEOM }
+};
+let currentBoard = "glove80";
+function boardOf(choice) {
+  if (choice === "custom") return (customCodes && customCodes.length === 60) ? "go60" : "glove80";
+  return (KEYMAPS[choice] && KEYMAPS[choice].board) || "glove80";
+}
+
+let keyEls = [];
+let keyGlyphs = [];
+let charKeyMap = {};
+let shiftKeyEls = [];
+let altKeyEls = [];
+
+function makeKey(code, idx) {
+  const el = document.createElement("div");
+  el.className = "key";
+  const g = LAYOUTS[osLayout].keys[code] || LAYOUTS[osLayout].keys[KEY_ALIASES[code]];
+  keyGlyphs[idx] = g || null;
+  if (g) {
+    el.textContent = g.label || g.b;
+    if (g.s) {
+      const s = document.createElement("span");
+      s.className = "s"; s.textContent = g.s;
+      el.appendChild(s);
+    }
+    const optText = [g.o, g.so].filter(Boolean).join(" ");
+    if (optText) {
+      const o = document.createElement("span");
+      o.className = "o"; o.textContent = optText;
+      el.appendChild(o);
+    }
+    charKeyMap[g.b] = charKeyMap[g.b] || { idx, shift: false, alt: false };
+    if (g.cap) charKeyMap[g.cap] = { idx, shift: true, alt: false };
+    if (g.s)   charKeyMap[g.s]   = charKeyMap[g.s]   || { idx, shift: true, alt: false };
+    if (g.o)   charKeyMap[g.o]   = charKeyMap[g.o]   || { idx, shift: false, alt: true };
+    if (g.so)  charKeyMap[g.so]  = charKeyMap[g.so]  || { idx, shift: true, alt: true };
+  } else {
+    el.classList.add("mutedkey");
+    const base = code.split("_")[0];
+    el.textContent = MUTED_LABELS[code] || MUTED_LABELS[base] || code.slice(0, 4).toLowerCase();
+    if (code === "LSHFT" || code === "RSHFT" || code === "LSHIFT" || code === "RSHIFT") shiftKeyEls.push(el);
+    if (code === "LALT" || code === "RALT") altKeyEls.push(el);
+  }
+  keyEls[idx] = el;
+  return el;
+}
+
+// px per geometry unit: 100 units (one key pitch) → 64px, keys 58px + 6px gap
+const KEY_SCALE = 0.64;
+
+// resolve a geometry entry to an axis-aligned position + rotation about the
+// key's own centre (so the hit/miss scale animations stay in place)
+function keyPlace(gm) {
+  let [x, y, rot = 0, rx = 0, ry = 0] = gm;
+  if (rot) {
+    const th = (rot / 100) * Math.PI / 180;
+    const vx = x + 50 - rx, vy = y + 50 - ry;
+    x = rx + vx * Math.cos(th) - vy * Math.sin(th) - 50;
+    y = ry + vx * Math.sin(th) + vy * Math.cos(th) - 50;
+  }
+  return { x, y, deg: rot / 100 };
+}
+
+const boardFit = document.getElementById("boardFit");
+function fitBoard() {
+  const board = document.getElementById("board");
+  const w = parseFloat(board.style.width);
+  const h = parseFloat(board.style.height);
+  if (!w) return;
+  const avail = boardFit.parentElement.clientWidth - 32; // panel padding
+  const s = Math.min(1, avail / w);
+  board.style.transform = s < 1 ? "scale(" + s + ")" : "";
+  boardFit.style.width = (w * s) + "px";
+  boardFit.style.height = (h * s) + "px";
+}
+window.addEventListener("resize", fitBoard);
+
+// characters produced by a dead key followed by a vowel
+const DEAD_COMPOSE = {
+  "´": { a: "á", e: "é", i: "í", o: "ó", u: "ú" },
+  "`": { a: "à", e: "è", i: "ì", o: "ò", u: "ù" },
+  "^": { a: "â", e: "ê", i: "î", o: "ô", u: "û" },
+  "¨": { a: "ä", e: "ë", i: "ï", o: "ö", u: "ü" },
+  "~": { a: "ã", n: "ñ", o: "õ" }
+};
+
+function registerCompositions() {
+  keyGlyphs.forEach((g, idx) => {
+    if (!g || !g.dead) return;
+    const variants = [[g.b, false, false], [g.s, true, false], [g.o, false, true]];
+    for (const [d, sh, al] of variants) {
+      const table = d && DEAD_COMPOSE[d];
+      if (!table) continue;
+      for (const [vowel, accented] of Object.entries(table)) {
+        if (!charKeyMap[accented] && charKeyMap[vowel]) {
+          charKeyMap[accented] = { idx, shift: sh, alt: al, then: vowel };
+          const up = accented.toUpperCase();
+          if (!charKeyMap[up]) charKeyMap[up] = { idx, shift: sh, alt: al, then: vowel.toUpperCase() };
+        }
+      }
+    }
+  });
+}
+
+function renderBoard(codes) {
+  keyEls = []; keyGlyphs = []; charKeyMap = {}; shiftKeyEls = []; altKeyEls = [];
+  const B = BOARDS[currentBoard] || BOARDS.glove80;
+  const board = document.getElementById("board");
+  board.replaceChildren();
+  let maxY = 0;
+  B.geom.forEach((gm, idx) => {
+    if (!gm) return;
+    const el = makeKey(codes[idx], idx);
+    const p = keyPlace(gm);
+    el.style.left = (p.x * KEY_SCALE + 3) + "px";
+    el.style.top = (p.y * KEY_SCALE + 3) + "px";
+    if (p.deg) el.style.setProperty("--kt", "rotate(" + p.deg + "deg)");
+    board.appendChild(el);
+    maxY = Math.max(maxY, p.y + 100 + (p.deg ? 30 : 0)); // rotated corners stick out
+  });
+  board.style.width = (1800 * KEY_SCALE) + "px";
+  board.style.height = ((maxY + 10) * KEY_SCALE) + "px";
+  fitBoard();
+  buildCoords(B);
+  keyEls.forEach((el, idx) => {
+    const f = fingerOf(idx);
+    if (f) el.classList.add("f-" + f);
+  });
+  registerCompositions();
+}
+
+// which finger a key belongs to, from its MoErgo column number
+// (C1 inner reach + C2 = index, C3 = middle, C4 = ring, C5 + C6 outer = pinky)
+function fingerOf(idx) {
+  const k = KEYCOORD[idx];
+  if (!k) return null;
+  if (k.t !== undefined) return "thumb";
+  return ["index", "index", "middle", "ring"][k.c - 1] || "pinky";
+}
+
+// flash the wrongly pressed key in red, with an arrow toward the right key
+// and +⇧/−⇧ (+⌥/−⌥) badges for missing or extra modifiers
+function redFlash(el) {
+  el.classList.add("miss");
+  clearTimeout(el._missTimer);
+  el._missTimer = setTimeout(() => {
+    el.classList.remove("miss");
+    const dd = el.querySelector(".dir");
+    if (dd) dd.remove();
+  }, 1200);
+}
+
+function flashMiss(got, exp) {
+  const ref = keyRef(got);
+  if (!ref) return;
+  const el = keyEls[ref.idx];
+  if (!el) return;
+  const old = el.querySelector(".dir");
+  if (old) old.remove();
+
+  const eref = keyRef(exp);
+  let arrow = null;
+  const mods = [];
+  if (eref) {
+    if (eref.shift && !ref.shift) mods.push("+⇧");
+    if (!eref.shift && ref.shift) mods.push("−⇧");
+    if (eref.alt && !ref.alt) mods.push("+⌥");
+    if (!eref.alt && ref.alt) mods.push("−⌥");
+    if (eref.idx !== ref.idx && POS[eref.idx] && POS[ref.idx]) {
+      const dx = Math.sign(POS[eref.idx].x - POS[ref.idx].x);
+      const dy = Math.sign(POS[eref.idx].row - POS[ref.idx].row);
+      const ARROWS = {
+        "1,0": "→", "-1,0": "←", "0,1": "↓", "0,-1": "↑",
+        "1,-1": "↗", "1,1": "↘", "-1,-1": "↖", "-1,1": "↙"
+      };
+      arrow = ARROWS[dx + "," + dy] || null;
+    }
+  }
+
+  if (arrow || mods.length) {
+    const d = document.createElement("span");
+    d.className = "dir";
+    if (arrow) {
+      const a = document.createElement("span");
+      a.className = "darrow";
+      a.textContent = arrow;
+      d.appendChild(a);
+    }
+    if (mods.length) {
+      const m = document.createElement("span");
+      m.className = "dmods" + (arrow ? "" : " solo");
+      m.textContent = mods.join(" ");
+      d.appendChild(m);
+    }
+    el.appendChild(d);
+  }
+  redFlash(el);
+  showBigDir(arrow, mods);
+
+  // an extra modifier was held — flash the modifier key itself red too
+  if (mods.includes("−⇧")) for (const s of shiftKeyEls) redFlash(s);
+  if (mods.includes("−⌥")) for (const a of altKeyEls) redFlash(a);
+  // (a missing modifier already glows yellow via the next-key highlight)
+}
+
+// oversized arrow overlaying the whole board, so the correction is visible at a glance
+let bigDirTimer = null;
+function showBigDir(arrow, mods) {
+  if (!arrow && !mods.length) return;
+  const big = document.getElementById("bigDir");
+  big.replaceChildren();
+  if (arrow) {
+    const a = document.createElement("span");
+    a.className = "ba";
+    a.textContent = arrow;
+    big.appendChild(a);
+  }
+  if (mods.length) {
+    const m = document.createElement("span");
+    m.className = "bm";
+    m.textContent = mods.join("  ");
+    big.appendChild(m);
+  }
+  big.classList.add("show");
+  clearTimeout(bigDirTimer);
+  bigDirTimer = setTimeout(() => big.classList.remove("show"), 900);
+}
+
+function highlightFor(ch) {
+  for (const el of document.querySelectorAll(".key.hit")) el.classList.remove("hit");
+  if (ch === undefined) return;
+  const lookup = charKeyMap[ch];
+  if (!lookup) return;
+  if (keyEls[lookup.idx]) keyEls[lookup.idx].classList.add("hit");
+  if (lookup.shift) for (const el of shiftKeyEls) el.classList.add("hit");
+  if (lookup.alt) for (const el of altKeyEls) el.classList.add("hit");
+}
+
+/* ---------------- insights ---------------- */
+
+// POS: physical grid for direction arrows — x runs 0..11 left→right across
+// both halves, row 0..5 top→bottom.
+// KEYCOORD: MoErgo's official naming, matching the Glove80 user guide
+// (docs.moergo.com) and Layout Editor:
+//   columns C1–C6 counted from the inner column outward on each half,
+//   rows R1 (function row) to R6 (bottom row),
+//   thumbs T1–T6: upper arc T1→T3 toward the centre, lower arc T4→T6.
+// Rebuilt whenever the board geometry changes (Glove80 ↔ Go60).
+const POS = {};
+const KEYCOORD = {};
+function buildCoords(B) {
+  for (const k in POS) delete POS[k];
+  for (const k in KEYCOORD) delete KEYCOORD[k];
+  const nL = B.leftCols.length;
+  B.leftCols.forEach((slots, c) => slots.forEach((idx, r) => {
+    if (idx === null) return;
+    POS[idx] = { x: c, row: r, half: "LEFT" };
+    KEYCOORD[idx] = { hand: "L", c: nL - c, r: r + 1 };
+  }));
+  B.rightCols.forEach((slots, c) => slots.forEach((idx, r) => {
+    if (idx === null) return;
+    POS[idx] = { x: 6 + c, row: r, half: "RIGHT" };
+    KEYCOORD[idx] = { hand: "R", c: c + 1, r: r + 1 };
+  }));
+  const th = B.thumbs;
+  (th.leftTop  || []).forEach((idx, i) => { POS[idx] = { x: 3.5 + i, row: 6, half: "LEFT" };  KEYCOORD[idx] = { hand: "L", t: i + 1 }; });
+  (th.leftBot  || []).forEach((idx, i) => { POS[idx] = { x: 3.8 + i, row: 7, half: "LEFT" };  KEYCOORD[idx] = { hand: "L", t: i + 4 }; });
+  (th.rightTop || []).forEach((idx, i) => { POS[idx] = { x: 5.5 + i, row: 6, half: "RIGHT" }; KEYCOORD[idx] = { hand: "R", t: 3 - i }; });
+  (th.rightBot || []).forEach((idx, i) => { POS[idx] = { x: 5.8 + i, row: 7, half: "RIGHT" }; KEYCOORD[idx] = { hand: "R", t: 6 - i }; });
+}
+buildCoords(BOARDS[currentBoard]);
+
+function dispChar(ch) { return ch === " " ? "␣" : ch; }
+function numWord(n) { return ["zero", "one", "two", "three", "four", "five"][n] || String(n); }
+
+function keyRef(ch) {
+  if (!ch) return null;
+  return charKeyMap[ch] || charKeyMap[ch.toLowerCase()] || null;
+}
+
+function adviceFor(exp, got) {
+  if (exp === " ") return "space is on the right thumb cluster";
+  if (got === " ") return "you hit space too early — finish the word first";
+  const a = keyRef(exp), b = keyRef(got);
+  if (!a || !b) return "watch the yellow highlight on the board";
+  if (a.idx === b.idx) {
+    if (a.alt && !b.alt) return "right key — but hold ⌥";
+    if (!a.alt && b.alt) return "right key — without ⌥";
+    if (a.shift && !b.shift) return "right key — but hold ⇧";
+    if (!a.shift && b.shift) return "right key — without ⇧";
+    return "same key — check your modifiers";
+  }
+  const pa = POS[a.idx], pb = POS[b.idx];
+  if (!pa || !pb) return "watch the yellow highlight on the board";
+  if (pa.half !== pb.half) return "wrong hand — " + dispChar(exp) + " is on the " + pa.half + " half";
+  const parts = [];
+  const dx = pa.x - pb.x, dy = pa.row - pb.row;
+  if (dx) parts.push(numWord(Math.abs(dx)) + " key" + (Math.abs(dx) > 1 ? "s" : "") + " more to the " + (dx > 0 ? "RIGHT" : "LEFT"));
+  if (dy) parts.push(numWord(Math.abs(dy)) + " row" + (Math.abs(dy) > 1 ? "s" : "") + " " + (dy > 0 ? "DOWN" : "UP"));
+  let s = "go " + parts.join(" and ");
+  if (a.shift && !b.shift) s += ", holding ⇧";
+  if (a.alt && !b.alt) s += ", holding ⌥";
+  return s;
+}
+
+function makeBold(text) {
+  const b = document.createElement("b");
+  b.textContent = text;
+  return b;
+}
+
+function renderInsights() {
+  const body = document.getElementById("insBody");
+  const items = Object.entries(confusions).map(([exp, gots]) => {
+    let errs = 0, worstGot = null, worstN = 0;
+    for (const [g, n] of Object.entries(gots)) {
+      errs += n;
+      if (n > worstN) { worstN = n; worstGot = g; }
+    }
+    return { exp, errs, worstGot, worstN };
+  }).filter(x => x.errs >= 2).sort((a, b) => b.errs - a.errs).slice(0, 5);
+
+  body.replaceChildren();
+  if (!items.length) {
+    const p = document.createElement("div");
+    p.className = "ins-empty";
+    p.textContent = "Type a few lines and your most-missed keys will show up here, with directions for fixing the motion. The Weak keys mode then practises exactly those keys.";
+    body.appendChild(p);
+    return;
+  }
+  for (const it of items) {
+    const row = document.createElement("div");
+    row.className = "ins";
+    const pair = document.createElement("span");
+    pair.className = "pairkeys";
+    const want = document.createElement("span");
+    want.className = "k want"; want.textContent = dispChar(it.exp);
+    const arr = document.createElement("span");
+    arr.className = "arr"; arr.textContent = "←";
+    const got = document.createElement("span");
+    got.className = "k got"; got.textContent = dispChar(it.worstGot);
+    pair.append(want, arr, got);
+
+    const txt = document.createElement("span");
+    txt.className = "txt";
+    txt.append("You hit ", makeBold(dispChar(it.worstGot)), " instead of ",
+      makeBold(dispChar(it.exp)), " " + it.worstN + "× — ");
+    const em = document.createElement("em");
+    em.textContent = adviceFor(it.exp, it.worstGot);
+    txt.append(em, ".");
+    row.append(pair, txt);
+    body.appendChild(row);
+  }
+}
+
+document.getElementById("insReset").addEventListener("click", () => {
+  confusions = {};
+  attempts = {};
+  localStorage.removeItem("tangent-confusions");
+  localStorage.removeItem("tangent-attempts");
+  renderInsights();
+});
+
+function topTroubleChars(n) {
+  return Object.entries(confusions)
+    .map(([exp, gots]) => [exp, Object.values(gots).reduce((a, b) => a + b, 0)])
+    .filter(([c, errs]) => errs >= 2 && c !== " ")
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([c]) => c);
+}
+
+function genFocus() {
+  const trouble = topTroubleChars(5);
+  if (!trouble.length) return pickWords(pack().lettersWords, 7);
+  const pool = [...pack().lettersWords, ...pack().commonWords,
+    ...pack().quotes.flatMap(s => s.toLowerCase().split(/[^a-zà-ÿ]+/))]
+    .filter(w => w.length > 1 && trouble.some(c => w.includes(c)));
+  const out = [];
+  for (let i = 0; i < 8; i++) {
+    if (!pool.length || Math.random() < 0.35) {
+      const c = pick(trouble);
+      out.push(c + c + c);
+    } else {
+      out.push(pick(pool));
+    }
+  }
+  return out.join(" ");
+}
+
+/* ---------------- keymap loading ---------------- */
+
+function entryToCode(e) {
+  if (typeof e === "string") {
+    const parts = e.replace(/^&/, "").trim().split(/[\s()]+/).filter(Boolean);
+    return parts[0] === "kp" ? (parts[1] || "NONE") : parts[0].toUpperCase();
+  }
+  if (e && typeof e === "object") {
+    const beh = String(e.value || e.behavior || "").replace(/^&/, "");
+    let p = (e.params || [])[0];
+    if (p && typeof p === "object") p = p.value !== undefined ? p.value : p.keycode;
+    return beh === "kp" ? String(p || "NONE") : (beh || "NONE").toUpperCase();
+  }
+  return "NONE";
+}
+
+function parseKeymap(text) {
+  try {
+    const j = JSON.parse(text);
+    const layers = j.layers || (j.keymap && j.keymap.layers);
+    if (Array.isArray(layers) && Array.isArray(layers[0])) {
+      const n = layers[0].length;
+      if (n === 60) return layers[0].slice(0, 60).map(entryToCode);
+      if (n >= 80) return layers[0].slice(0, 80).map(entryToCode);
+    }
+    throw new Error("JSON has no 60- or 80-key layer");
+  } catch (err) {
+    if (err instanceof SyntaxError) {
+      const m = text.match(/bindings\s*=\s*<([\s\S]*?)>/);
+      if (!m) throw new Error("no bindings block found");
+      const toks = m[1].trim().split(/\s+/);
+      const out = [];
+      let cur = null;
+      for (const t of toks) {
+        if (t.startsWith("&")) { if (cur) out.push(cur); cur = [t]; }
+        else if (cur) cur.push(t);
+      }
+      if (cur) out.push(cur);
+      if (out.length !== 60 && out.length < 80) throw new Error("expected 60 or 80 bindings, found " + out.length);
+      const n = out.length === 60 ? 60 : 80;
+      return out.slice(0, n).map(b => entryToCode(b.join(" ")));
+    }
+    throw err;
+  }
+}
+
+const keymapSel = document.getElementById("keymapSel");
+function refreshKeymapSelect() {
+  keymapSel.replaceChildren();
+  for (const [id, k] of Object.entries(KEYMAPS)) {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = k.name;
+    keymapSel.appendChild(opt);
+  }
+  if (customCodes) {
+    const opt = document.createElement("option");
+    opt.value = "custom";
+    opt.textContent = "Custom (imported)";
+    keymapSel.appendChild(opt);
+  }
+  const imp = document.createElement("option");
+  imp.value = "__import";
+  imp.textContent = "Import from file…";
+  keymapSel.appendChild(imp);
+  keymapSel.value = keymapChoice;
+}
+keymapSel.addEventListener("change", () => {
+  if (keymapSel.value === "__import") {
+    keymapSel.value = keymapChoice; // revert until a file actually loads
+    // show a real file input (programmatic click is blocked in some browsers),
+    // and try to open the dialog directly where allowed
+    filePick.hidden = false;
+    importMsg.textContent = "…or drop the file on the keyboard below";
+    filePick.click();
+    return;
+  }
+  applyKeymap(keymapSel.value);
+});
+
+function applyKeymap(choice) {
+  keymapChoice = choice;
+  localStorage.setItem("tangent-keymap-choice", choice);
+  boardCodes = (choice === "custom" && customCodes) ? customCodes : KEYMAPS[choice].codes;
+  currentBoard = boardOf(choice);
+  renderBoard(boardCodes);
+  renderSheet();
+  buildTabs(mode.id);
+  render(els.ghost.value);
+  els.ghost.focus();
+}
+
+const layoutSel = document.getElementById("layoutSel");
+for (const [id, l] of Object.entries(LAYOUTS)) {
+  const opt = document.createElement("option");
+  opt.value = id;
+  opt.textContent = l.name;
+  layoutSel.appendChild(opt);
+}
+layoutSel.value = osLayout;
+layoutSel.addEventListener("change", () => applyLayout(layoutSel.value));
+
+const textSel = document.getElementById("textSel");
+{
+  const auto = document.createElement("option");
+  auto.value = "auto";
+  auto.textContent = "Auto";
+  textSel.appendChild(auto);
+  for (const [id, name] of Object.entries(LANG_NAMES)) {
+    const opt = document.createElement("option");
+    opt.value = id;
+    opt.textContent = name;
+    textSel.appendChild(opt);
+  }
+  textSel.value = (textLang === "auto" || PACKS[textLang]) ? textLang : "auto";
+}
+textSel.addEventListener("change", () => {
+  textLang = textSel.value;
+  localStorage.setItem("tangent-textlang", textLang);
+  buildTabs(mode.id); // the letters-mode fallback label follows the text language
+  newLine();
+  els.ghost.focus();
+});
+
+function applyLayout(id) {
+  osLayout = id;
+  localStorage.setItem("tangent-oslayout", id);
+  renderBoard(boardCodes);
+  renderSheet();
+  buildTabs(mode.id);
+  linesDone = 0;
+  els.lines.textContent = "0";
+  els.result.textContent = "";
+  loadBest();
+  newLine();
+  els.ghost.focus();
+}
+
+/* ---------------- cheat sheet (generated from the active layout) ---------------- */
+
+function sheetChip(ch, mods, base, note) {
+  const chip = document.createElement("div");
+  chip.className = "chip";
+  const c = document.createElement("span");
+  c.className = "ch";
+  c.textContent = ch;
+  const how = document.createElement("span");
+  how.className = "how";
+  if (mods) {
+    const b = document.createElement("b");
+    b.textContent = mods;
+    how.append(b, " ");
+  }
+  how.append(base);
+  if (note) how.append(" · " + note);
+  chip.append(c, how);
+  return chip;
+}
+
+function renderSheet() {
+  const body = document.getElementById("sheetBody");
+  body.replaceChildren();
+  const shift = [], opt = [], dead = [], special = [];
+  const seen = new Set();
+  keyGlyphs.forEach(g => {
+    if (!g || seen.has(g.b)) return;
+    seen.add(g.b);
+    const base = g.b === " " ? "space" : (/^[a-zà-ÿ]$/i.test(g.b) ? g.b.toUpperCase() : g.b);
+    if (/[^\x00-\x7F]/.test(g.b) && /[a-zà-ÿ]/i.test(g.b)) special.push(g.b);
+    if (g.dead) {
+      dead.push([g.b, "", base]);
+      if (g.s) dead.push([g.s, "⇧", base]);
+      if (g.o) dead.push([g.o, "⌥", base]);
+    } else {
+      if (g.s) shift.push([g.s, "⇧", base]);
+      if (g.o) opt.push([g.o, "⌥", base]);
+    }
+    if (g.so) opt.push([g.so, "⇧⌥", base]);
+  });
+
+  const addGroup = (title, items, note) => {
+    if (!items.length) return;
+    const h = document.createElement("h3");
+    h.textContent = title;
+    body.appendChild(h);
+    const grid = document.createElement("div");
+    grid.className = "sheet-grid";
+    for (const [ch, mods, base] of items) grid.appendChild(sheetChip(ch, mods, base, note));
+    body.appendChild(grid);
+  };
+
+  if (special.length) {
+    const h = document.createElement("h3");
+    h.textContent = "Special letters";
+    body.appendChild(h);
+    const p = document.createElement("p");
+    p.className = "tip";
+    p.textContent = special.join("  ") + " — dedicated keys; watch the yellow highlight on the board to learn their spots.";
+    body.appendChild(p);
+  }
+  addGroup("Shift combos", shift);
+  addGroup("⌥ combos", opt);
+  addGroup("Dead keys — press, then space", dead, "then space");
+  if (dead.length) {
+    const p = document.createElement("p");
+    p.className = "tip";
+    p.textContent = "Dead keys show nothing until the next keystroke — press the dead key, then space for the bare symbol, or a vowel to compose (´ + e = é).";
+    body.appendChild(p);
+  }
+}
+
+const filePick = document.getElementById("filePick");
+const importMsg = document.getElementById("importMsg");
+
+// Layout Editor exports carry the OS input source as `locale`
+// (e.g. "sv-SE-mac") — map it onto one of our OS layouts.
+function inferLayout(text) {
+  let loc;
+  try { loc = JSON.parse(text).locale; } catch (e) { return null; }
+  if (!loc) return null;
+  const parts = String(loc).toLowerCase().split("-");
+  const lang = parts[0], region = parts[1] || "";
+  const map = {
+    sv: "sv-mac", no: "no-mac", nb: "no-mac", nn: "no-mac", da: "da-mac",
+    de: "de-mac", fr: "fr-mac", es: "es-mac",
+    en: (region === "gb" || region === "uk") ? "uk-mac" : "us"
+  };
+  return LAYOUTS[map[lang]] ? map[lang] : null;
+}
+
+function importKeymapFile(f) {
+  f.text().then(text => {
+    try {
+      const codes = parseKeymap(text);
+      localStorage.setItem("tangent-keymap", JSON.stringify(codes));
+      customCodes = codes;
+      keymapChoice = "custom";
+      localStorage.setItem("tangent-keymap-choice", "custom");
+      boardCodes = codes;
+      currentBoard = codes.length === 60 ? "go60" : "glove80";
+      let note = "";
+      const inferred = inferLayout(text);
+      if (inferred && inferred !== osLayout) {
+        osLayout = inferred;
+        localStorage.setItem("tangent-oslayout", inferred);
+        layoutSel.value = inferred;
+        note = " · OS input: " + LAYOUTS[inferred].name;
+      }
+      refreshKeymapSelect();
+      renderBoard(codes);
+      renderSheet();
+      buildTabs(mode.id);
+      if (note) newLine(); // the language may have changed — reroll the line
+      else render(els.ghost.value);
+      filePick.hidden = true;
+      importMsg.textContent = "Imported: " + f.name + " ✓" + note;
+      setTimeout(() => { importMsg.textContent = ""; }, 6000);
+    } catch (err) {
+      importMsg.textContent = "Could not read " + f.name + " (" + err.message + ")";
+    }
+  });
+}
+
+filePick.addEventListener("change", () => {
+  const f = filePick.files[0];
+  if (f) importKeymapFile(f);
+  filePick.value = "";
+});
+
+// drag & drop a keymap file anywhere onto the keyboard panel
+const boardWrap = document.querySelector(".board-wrap");
+boardWrap.addEventListener("dragover", e => e.preventDefault());
+boardWrap.addEventListener("drop", e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) importKeymapFile(f);
+});
+
+let customCodes = null;
+try {
+  const saved = JSON.parse(localStorage.getItem("tangent-keymap"));
+  if (Array.isArray(saved) && (saved.length === 80 || saved.length === 60)) customCodes = saved;
+} catch (e) { /* none */ }
+let keymapChoice = localStorage.getItem("tangent-keymap-choice") || "factory-mac";
+if (!KEYMAPS[keymapChoice] && !(keymapChoice === "custom" && customCodes)) keymapChoice = "factory-mac";
+let boardCodes = (keymapChoice === "custom") ? customCodes : KEYMAPS[keymapChoice].codes;
+currentBoard = boardOf(keymapChoice);
+refreshKeymapSelect();
+renderBoard(boardCodes);
+renderSheet();
+
+/* ---------------- custom text ---------------- */
+
+let customRaw = localStorage.getItem("tangent-custom") || "";
+function splitCustom(t) { return t.split(/\n+/).map(s => s.trim()).filter(Boolean); }
+let customLines = splitCustom(customRaw);
+
+let lastCustom = null;
+function genCustom() {
+  if (!customLines.length) return "paste your own text in the box above, then start typing";
+  let line = pick(customLines);
+  if (customLines.length > 1) {
+    while (line === lastCustom) line = pick(customLines);
+  }
+  lastCustom = line;
+  return line;
+}
+
+function buildPrompt() {
+  const lang = LANG_NAMES[effLang()] || "English";
+  const weak = topTroubleChars(6).filter(c => c !== " ");
+  let p = "Write 12 short lines of " + lang + " text for typing practice. "
+        + "Put one sentence per line, with no numbering, bullets, or surrounding quotes. "
+        + "Keep each line under 60 characters and use everyday vocabulary.";
+  if (weak.length) {
+    p += " Work in extra words containing these characters I want to practise: "
+       + weak.join(" ") + ".";
+  }
+  return p;
+}
+
+const customPanel = document.getElementById("customPanel");
+const customText = document.getElementById("customText");
+const customMsg = document.getElementById("customMsg");
+customText.value = customRaw;
+
+customText.addEventListener("input", () => {
+  customRaw = customText.value;
+  localStorage.setItem("tangent-custom", customRaw);
+  customLines = splitCustom(customRaw);
+  if (mode.id === "custom" && els.ghost.value === "") newLine();
+});
+
+function copyPrompt() {
+  const text = buildPrompt();
+  const ok = () => {
+    customMsg.textContent = "Prompt copied — paste it into your LLM, then paste the reply back here.";
+    customMsg.classList.add("ok");
+    setTimeout(() => { customMsg.textContent = ""; customMsg.classList.remove("ok"); }, 6000);
+  };
+  const fallback = () => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    let done = false;
+    try { done = document.execCommand("copy"); } catch (e) { done = false; }
+    document.body.removeChild(ta);
+    if (done) ok();
+    else {
+      customMsg.classList.remove("ok");
+      customMsg.textContent = "Couldn't reach the clipboard — prompt: " + text;
+    }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+document.getElementById("copyPromptBtn").addEventListener("click", copyPrompt);
+
+function updateCustomPanel() {
+  customPanel.hidden = mode.id !== "custom";
+  updateFeedPanel();
+}
+
+/* ---------------- headline source panel ---------------- */
+
+const feedPanel = document.getElementById("feedPanel");
+const feedSel = document.getElementById("feedSel");
+const feedUrl = document.getElementById("feedUrl");
+const feedLoad = document.getElementById("feedLoad");
+const feedMsg = document.getElementById("feedMsg");
+feedSel.value = feedCfg.type;
+feedUrl.value = feedCfg.url;
+
+function updateFeedPanel() {
+  feedPanel.hidden = mode.id !== "hn";
+  const rss = feedSel.value === "rss";
+  feedUrl.hidden = !rss;
+  feedLoad.hidden = !rss;
+}
+
+function applyFeed() {
+  localStorage.setItem("tangent-feed", JSON.stringify(feedCfg));
+  feedGen++;
+  hnQueue = [];
+  hnError = false;
+  hnLoading = false;
+  currentStory = null;
+  prevStory = null;
+  buildTabs(mode.id);
+  feedMsg.classList.remove("ok");
+  if (feedCfg.type === "rss" && !feedCfg.url) {
+    feedMsg.textContent = "Paste a feed URL and press Load.";
+  } else {
+    feedMsg.textContent = "";
+    loadFeed();
+  }
+  if (mode.id === "hn") {
+    newLine();
+    els.ghost.focus();
+  }
+}
+
+feedSel.addEventListener("change", () => {
+  feedCfg.type = feedSel.value;
+  updateFeedPanel();
+  applyFeed();
+  if (feedCfg.type === "rss" && !feedCfg.url) feedUrl.focus();
+});
+function loadFeedUrl() {
+  feedCfg.url = feedUrl.value.trim();
+  applyFeed();
+}
+feedLoad.addEventListener("click", loadFeedUrl);
+feedUrl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); loadFeedUrl(); }
+});
+
+/* ---------------- go ---------------- */
+
+buildTabs(mode.id);
+loadBest();
+renderInsights();
+renderReadList();
+updateCustomPanel();
+newLine();
+els.ghost.focus();
+</script>
