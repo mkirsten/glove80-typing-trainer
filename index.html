@@ -339,6 +339,8 @@
     border-bottom-color: var(--fc);
     background: color-mix(in srgb, var(--fc) 10%, var(--key-bg));
   }
+  /* home position — where the fingers rest */
+  .key.home { box-shadow: inset 0 0 0 2px var(--fc); }
   .key.hit {
     background: var(--yellow); color: var(--yellow-ink);
     border-color: var(--yellow);
@@ -382,6 +384,10 @@
   .finger-legend .fl::before {
     content: ""; width: 11px; height: 11px; border-radius: 3px;
     background: var(--fc); flex-shrink: 0;
+  }
+  .finger-legend .fl.rest::before {
+    background: none; border: 2px solid var(--muted);
+    width: 9px; height: 9px;
   }
   .linkbtn {
     font: inherit; color: var(--blue); background: none; border: none;
@@ -533,6 +539,7 @@
       <span class="fl f-middle">middle</span>
       <span class="fl f-index">index</span>
       <span class="fl f-thumb">thumb</span>
+      <span class="fl rest">rest position</span>
     </p>
     <div class="bigdir" id="bigDir" aria-hidden="true"></div>
   </div>
@@ -1734,8 +1741,8 @@ Object.assign(KEYMAPS, {
 
 // board geometry registry; the visible board follows the selected layout
 const BOARDS = {
-  glove80: { leftCols: LEFT_COLS,      rightCols: RIGHT_COLS,      thumbs: THUMBS,      geom: G80_GEOM },
-  go60:    { leftCols: GO60_LEFT_COLS, rightCols: GO60_RIGHT_COLS, thumbs: GO60_THUMBS, geom: GO60_GEOM }
+  glove80: { leftCols: LEFT_COLS,      rightCols: RIGHT_COLS,      thumbs: THUMBS,      geom: G80_GEOM,  homeRow: 4 },
+  go60:    { leftCols: GO60_LEFT_COLS, rightCols: GO60_RIGHT_COLS, thumbs: GO60_THUMBS, geom: GO60_GEOM, homeRow: 3 }
 };
 let currentBoard = "glove80";
 function boardOf(choice) {
@@ -1863,6 +1870,9 @@ function renderBoard(codes) {
   keyEls.forEach((el, idx) => {
     const f = fingerOf(idx);
     if (f) el.classList.add("f-" + f);
+    // ring the home position: the four finger columns of the home row
+    const k = KEYCOORD[idx];
+    if (k && k.r === B.homeRow && k.c >= 2 && k.c <= 5) el.classList.add("home");
   });
   registerCompositions();
 }
