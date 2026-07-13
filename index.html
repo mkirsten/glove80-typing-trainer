@@ -1085,7 +1085,8 @@ let attempts = {};
 try { confusions = JSON.parse(localStorage.getItem("tangent-confusions")) || {}; } catch (e) { /* fresh */ }
 try { attempts = JSON.parse(localStorage.getItem("tangent-attempts")) || {}; } catch (e) { /* fresh */ }
 
-let mode = MODES[1]; // start in Normal text
+// start in Hacker News mode, or wherever the visitor left off
+let mode = MODES.find(m => m.id === localStorage.getItem("tangent-mode")) || MODES[0];
 let target = "";
 let startTime = null;
 let keystrokes = 0;     // chars entered (incl. mistakes)
@@ -1112,6 +1113,7 @@ function buildTabs(selectedId) {
     b.setAttribute("aria-selected", m.id === selectedId ? "true" : "false");
     b.addEventListener("click", () => {
       mode = m;
+      localStorage.setItem("tangent-mode", m.id);
       for (const t of els.tabs.children) t.setAttribute("aria-selected", "false");
       b.setAttribute("aria-selected", "true");
       linesDone = 0;
@@ -1524,8 +1526,30 @@ LAYOUTS["es-mac"] = {
   })
 };
 
-let osLayout = localStorage.getItem("tangent-oslayout") || "sv-mac";
-if (!LAYOUTS[osLayout]) osLayout = "sv-mac";
+// map a locale id ("sv-SE-mac", "en-GB", …) onto one of our OS layouts
+function layoutForLocale(locale) {
+  if (!locale) return null;
+  const parts = String(locale).toLowerCase().split("-");
+  const lang = parts[0], region = parts[1] || "";
+  const map = {
+    sv: "sv-mac", no: "no-mac", nb: "no-mac", nn: "no-mac", da: "da-mac",
+    de: "de-mac", fr: "fr-mac", es: "es-mac",
+    en: (region === "gb" || region === "uk") ? "uk-mac" : "us"
+  };
+  return LAYOUTS[map[lang]] ? map[lang] : null;
+}
+
+// first visit: infer the OS input source from the browser's languages
+function defaultLayout() {
+  for (const loc of (navigator.languages || [navigator.language])) {
+    const id = layoutForLocale(loc);
+    if (id) return id;
+  }
+  return "us";
+}
+
+let osLayout = localStorage.getItem("tangent-oslayout") || defaultLayout();
+if (!LAYOUTS[osLayout]) osLayout = defaultLayout();
 
 const MUTED_LABELS = {
   TAB: "⇥", ESC: "⎋", BSPC: "⌫", DEL: "⌦", RET: "⏎", ENTER: "⏎",
@@ -2319,17 +2343,7 @@ const importMsg = document.getElementById("importMsg");
 // Layout Editor exports carry the OS input source as `locale`
 // (e.g. "sv-SE-mac") — map it onto one of our OS layouts.
 function inferLayout(text) {
-  let loc;
-  try { loc = JSON.parse(text).locale; } catch (e) { return null; }
-  if (!loc) return null;
-  const parts = String(loc).toLowerCase().split("-");
-  const lang = parts[0], region = parts[1] || "";
-  const map = {
-    sv: "sv-mac", no: "no-mac", nb: "no-mac", nn: "no-mac", da: "da-mac",
-    de: "de-mac", fr: "fr-mac", es: "es-mac",
-    en: (region === "gb" || region === "uk") ? "uk-mac" : "us"
-  };
-  return LAYOUTS[map[lang]] ? map[lang] : null;
+  try { return layoutForLocale(JSON.parse(text).locale); } catch (e) { return null; }
 }
 
 function importKeymapFile(f) {
@@ -2385,8 +2399,13 @@ try {
   const saved = JSON.parse(localStorage.getItem("tangent-keymap"));
   if (Array.isArray(saved) && (saved.length === 80 || saved.length === 60)) customCodes = saved;
 } catch (e) { /* none */ }
-let keymapChoice = localStorage.getItem("tangent-keymap-choice") || "factory-mac";
-if (!KEYMAPS[keymapChoice] && !(keymapChoice === "custom" && customCodes)) keymapChoice = "factory-mac";
+// first visit: pick the factory keymap matching the visitor's OS
+function defaultKeymap() {
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform || "") || /Macintosh/.test(navigator.userAgent);
+  return mac ? "factory-mac" : "factory";
+}
+let keymapChoice = localStorage.getItem("tangent-keymap-choice") || defaultKeymap();
+if (!KEYMAPS[keymapChoice] && !(keymapChoice === "custom" && customCodes)) keymapChoice = defaultKeymap();
 let boardCodes = (keymapChoice === "custom") ? customCodes : KEYMAPS[keymapChoice].codes;
 currentBoard = boardOf(keymapChoice);
 refreshKeymapSelect();
