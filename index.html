@@ -2649,17 +2649,4 @@ if (osLayoutGuessed) {
 renderFocusNote(false);
 newLine();
 els.ghost.focus();
-
-/* ---------------- page-view count (hosted copy only) ----------------
-   Cloudflare Web Analytics: cookieless, no persistent identifier. It is
-   loaded only on the site I host, so a copy you downloaded and opened from
-   your own disk stays entirely offline. */
-const CF_BEACON_TOKEN = "";  // set when the site is created in Cloudflare
-if (CF_BEACON_TOKEN && location.hostname === "tangent-trainer.pages.dev") {
-  const s = document.createElement("script");
-  s.defer = true;
-  s.src = "https://static.cloudflareinsights.com/beacon.min.js";
-  s.setAttribute("data-cf-beacon", JSON.stringify({ token: CF_BEACON_TOKEN }));
-  document.body.appendChild(s);
-}
 </script>
