@@ -516,6 +516,21 @@
     margin: 18px 6px 8px;
   }
   .about-note a { color: var(--blue); }
+  /* a plain line of text, not the boxed panel `details` gets by default */
+  .demo { margin: 0 0 12px; border: none; background: none; }
+  .demo summary {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--muted); font-size: .85rem; cursor: pointer;
+    list-style: none; padding: 2px 0;
+  }
+  .demo summary::-webkit-details-marker { display: none; }
+  .demo summary::before { content: "▸"; color: var(--blue); transition: transform .15s; }
+  .demo[open] summary::before { transform: rotate(90deg); }
+  @media (prefers-reduced-motion: reduce) { .demo summary::before { transition: none; } }
+  .demo video {
+    display: block; width: 100%; max-width: 900px;
+    margin: 10px 0 0; border: 1px solid var(--line); border-radius: 10px;
+  }
 </style>
 
 <body>
@@ -530,7 +545,14 @@
     </a>
   </header>
 
-  <p class="mobile-note">Tangent teaches finger placement on a physical keyboard — it works best on a laptop or desktop.</p>
+  <p class="mobile-note">Tangent teaches finger placement on a physical keyboard — it works best on a laptop or desktop. The demo below shows what it does.</p>
+
+  <details class="demo">
+    <summary>Watch a 35-second demo — hunting for keys at 39 wpm, up to 81</summary>
+    <video controls preload="none" playsinline poster="screenshot.png">
+      <source src="tangent-demo.mp4" type="video/mp4">
+    </video>
+  </details>
 
   <div class="layout">
   <div class="main-col">
