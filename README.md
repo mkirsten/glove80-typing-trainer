@@ -2,9 +2,11 @@
 
 A typing trainer built for the [MoErgo Glove80](https://www.moergo.com/) split ergonomic keyboard. Practise your layout with an on-screen Glove80 that shows exactly **which key and which finger** to use, drawn from the keyboard's real physical geometry.
 
-**Try it: [open the trainer](https://mkirsten.github.io/glove80-typing-trainer/)** — it's a single HTML file, no build, no server, no tracking. Everything runs locally in your browser.
+**Try it: [tangent-trainer.pages.dev](https://tangent-trainer.pages.dev/)** — it's a single HTML file, no build, no server, no tracking. Everything runs locally in your browser; the only network calls fetch headlines (Hacker News mode uses the public [Algolia HN API](https://hn.algolia.com/api), and custom RSS feeds fall back to rss2json.com when the feed doesn't send CORS headers).
 
 ![Tangent screenshot](screenshot.png)
+
+[Watch the 1-minute demo](tangent-demo.mp4) — going from hunting for keys at 20 wpm to 70 wpm, in Hacker News mode.
 
 ## Features
 

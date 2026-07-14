@@ -1,7 +1,17 @@
+<!doctype html>
+<html lang="en">
 <meta charset="utf-8">
 <title>Tangent · Glove80 typing trainer</title>
 <meta name="description" content="Typing trainer for the MoErgo Glove80 split ergonomic keyboard. On-screen board with finger guidance, ZMK keymap and Layout Editor import, international layouts, and drills that target your weak keys.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%232B6CB8'/%3E%3Ctext x='50' y='72' font-size='64' font-family='monospace' font-weight='700' text-anchor='middle' fill='%23fff'%3ET%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="Tangent · Glove80 typing trainer">
+<meta property="og:description" content="Typing trainer for the MoErgo Glove80 split ergonomic keyboard, with finger guidance, ZMK keymap import, and drills that target your weak keys.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tangent-trainer.pages.dev/">
+<link rel="canonical" href="https://tangent-trainer.pages.dev/">
+<meta property="og:image" content="https://tangent-trainer.pages.dev/screenshot.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   :root {
     --bg: #F6F7F5;
@@ -105,6 +115,20 @@
 
   /* ---- mode tabs ---- */
   .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 0 auto; }
+  .gh-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: .85rem;
+    text-decoration: none;
+    transition: border-color .15s, background .15s;
+  }
+  .gh-btn:hover { border-color: var(--blue); background: var(--surface-2); }
+  .gh-btn svg { width: 16px; height: 16px; fill: currentColor; }
+  @media (prefers-reduced-motion: reduce) { .gh-btn { transition: none; } }
   .tab {
     border: 1px solid var(--line);
     background: var(--surface);
@@ -473,6 +497,25 @@
   }
   .chip .how b { color: var(--blue); font-weight: 600; }
   .sheet p.tip { color: var(--muted); font-size: .82rem; margin: 10px 0 0; }
+  .mobile-note {
+    display: none;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: .88rem;
+    padding: 10px 14px;
+    margin: 0 0 14px;
+  }
+  @media (pointer: coarse) {
+    .mobile-note { display: block; }
+  }
+  .about-note {
+    color: var(--muted);
+    font-size: .82rem;
+    margin: 18px 6px 8px;
+  }
+  .about-note a { color: var(--blue); }
 </style>
 
 <div class="wrap">
@@ -480,7 +523,13 @@
     <h1>Tangent<span class="dot">.</span></h1>
     <span class="sub">Glove80 typing trainer</span>
     <div class="tabs" role="tablist" id="tabs"></div>
+    <a class="gh-btn" href="https://github.com/mkirsten/glove80-typing-trainer" target="_blank" rel="noopener" title="Source on GitHub — a single HTML file">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
   </header>
+
+  <p class="mobile-note">Tangent teaches finger placement on a physical keyboard — it works best on a laptop or desktop.</p>
 
   <div class="layout">
   <div class="main-col">
@@ -575,10 +624,29 @@
     <summary>Layout cheat sheet</summary>
     <div class="sheet" id="sheetBody"></div>
   </details>
+
+  <p class="about-note">I got the Glove80 and couldn't find a good trainer that helped me find the right keys. I built this to help me — maybe it is useful for somebody else too.</p>
 </div>
 
 <script>
 "use strict";
+
+// localStorage throws when the browser blocks site data (e.g. "block all
+// cookies") — fall back to an in-memory map so the app still runs
+const store = (() => {
+  try {
+    localStorage.setItem("tangent-probe", "1");
+    localStorage.removeItem("tangent-probe");
+    return localStorage;
+  } catch (e) {
+    const m = new Map();
+    return {
+      getItem: k => (m.has(k) ? m.get(k) : null),
+      setItem: (k, v) => m.set(k, String(v)),
+      removeItem: k => m.delete(k)
+    };
+  }
+})();
 
 /* ---------------- drill content ---------------- */
 
@@ -849,7 +917,7 @@ const LANG_NAMES = {
 };
 
 // language of the generated lines: explicit choice, or follow the OS input source
-let textLang = localStorage.getItem("tangent-textlang") || "auto";
+let textLang = store.getItem("tangent-textlang") || "auto";
 function effLang() {
   return (textLang !== "auto" && PACKS[textLang]) ? textLang : LAYOUTS[osLayout].lang;
 }
@@ -909,7 +977,8 @@ function genText() {
 function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
 function pickWords(pool, n) {
   const out = [];
-  while (out.length < n) {
+  let guard = n * 20; // bail out if the pool is too small to avoid repeats
+  while (out.length < n && guard-- > 0) {
     const w = pick(pool);
     if (out[out.length - 1] !== w) out.push(w);
   }
@@ -919,7 +988,7 @@ function pickWords(pool, n) {
 /* ---------------- headlines mode (Hacker News or any RSS/Atom feed) ---------------- */
 
 let feedCfg = { type: "hn", url: "" };
-try { feedCfg = Object.assign(feedCfg, JSON.parse(localStorage.getItem("tangent-feed")) || {}); } catch (e) { /* fresh */ }
+try { feedCfg = Object.assign(feedCfg, JSON.parse(store.getItem("tangent-feed")) || {}); } catch (e) { /* fresh */ }
 
 let hnQueue = [];
 let hnLoading = false;
@@ -928,7 +997,7 @@ let feedGen = 0; // bumped on source change to void in-flight fetches
 let currentStory = null;
 let prevStory = null;
 let readList = [];
-try { readList = JSON.parse(localStorage.getItem("tangent-readlist")) || []; } catch (e) { /* fresh */ }
+try { readList = JSON.parse(store.getItem("tangent-readlist")) || []; } catch (e) { /* fresh */ }
 
 function sanitizeHeadline(t) {
   return t
@@ -938,7 +1007,7 @@ function sanitizeHeadline(t) {
     .replace(/×/g, "x")
     .replace(/…/g, "...")
     .replace(/ /g, " ")
-    .replace(/[^\x20-\x7EåäöÅÄÖéÉüÜß]/g, "")
+    .replace(/[^\x20-\x7EåäöÅÄÖæÆøØüÜßéÉèÈêÊëËçÇàÀâÂùÙûÛîÎïÏôÔñÑíÍóÓúÚ¿¡]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -1019,7 +1088,7 @@ function genHN() {
     currentStory = null;
     return feedCfg.type === "rss"
       ? "Could not load that feed - check the url and press load to retry"
-      : "Could not load Hacker News - it works in the local file, not the artifact";
+      : "Could not load Hacker News - press esc to retry, or pick another mode above";
   }
   if (!hnQueue.length) {
     loadFeed();
@@ -1038,7 +1107,7 @@ function saveHeadline() {
   if (!story) return;
   if (!readList.some(s => s.url === story.url)) {
     readList.push(story);
-    localStorage.setItem("tangent-readlist", JSON.stringify(readList));
+    store.setItem("tangent-readlist", JSON.stringify(readList));
     renderReadList();
   }
   els.result.replaceChildren("Saved to reading list: ", makeBold(story.title));
@@ -1067,7 +1136,7 @@ function renderReadList() {
 
 document.getElementById("rlClear").addEventListener("click", () => {
   readList = [];
-  localStorage.removeItem("tangent-readlist");
+  store.removeItem("tangent-readlist");
   renderReadList();
 });
 
@@ -1089,11 +1158,11 @@ const els = {
 
 let confusions = {};
 let attempts = {};
-try { confusions = JSON.parse(localStorage.getItem("tangent-confusions")) || {}; } catch (e) { /* fresh */ }
-try { attempts = JSON.parse(localStorage.getItem("tangent-attempts")) || {}; } catch (e) { /* fresh */ }
+try { confusions = JSON.parse(store.getItem("tangent-confusions")) || {}; } catch (e) { /* fresh */ }
+try { attempts = JSON.parse(store.getItem("tangent-attempts")) || {}; } catch (e) { /* fresh */ }
 
 // start in Hacker News mode, or wherever the visitor left off
-let mode = MODES.find(m => m.id === localStorage.getItem("tangent-mode")) || MODES[0];
+let mode = MODES.find(m => m.id === store.getItem("tangent-mode")) || MODES[0];
 let target = "";
 let startTime = null;
 let keystrokes = 0;     // chars entered (incl. mistakes)
@@ -1104,7 +1173,7 @@ let composing = false;
 
 const bestKey = m => "tangent-best-" + m.id;
 function loadBest() {
-  const v = localStorage.getItem(bestKey(mode));
+  const v = store.getItem(bestKey(mode));
   els.best.innerHTML = (v ? v : "–") + "<small> wpm</small>";
 }
 
@@ -1120,7 +1189,7 @@ function buildTabs(selectedId) {
     b.setAttribute("aria-selected", m.id === selectedId ? "true" : "false");
     b.addEventListener("click", () => {
       mode = m;
-      localStorage.setItem("tangent-mode", m.id);
+      store.setItem("tangent-mode", m.id);
       for (const t of els.tabs.children) t.setAttribute("aria-selected", "false");
       b.setAttribute("aria-selected", "true");
       linesDone = 0;
@@ -1164,17 +1233,17 @@ function finishLine(typed) {
   els.wpm.innerHTML = wpm + "<small> wpm</small>";
   els.acc.innerHTML = acc + "<small> %</small>";
 
-  const prev = Number(localStorage.getItem(bestKey(mode)) || 0);
+  const prev = Number(store.getItem(bestKey(mode)) || 0);
   let pb = "";
   if (acc >= 90 && wpm > prev) {
-    localStorage.setItem(bestKey(mode), wpm);
+    store.setItem(bestKey(mode), wpm);
     loadBest();
     pb = ' <span class="pb">new personal best!</span>';
   }
   els.result.innerHTML =
     "Line done: <strong>" + wpm + " wpm</strong> at <strong>" + acc + " %</strong> accuracy." + pb;
-  localStorage.setItem("tangent-confusions", JSON.stringify(confusions));
-  localStorage.setItem("tangent-attempts", JSON.stringify(attempts));
+  store.setItem("tangent-confusions", JSON.stringify(confusions));
+  store.setItem("tangent-attempts", JSON.stringify(attempts));
   renderInsights();
   newLine();
 }
@@ -1317,13 +1386,21 @@ els.ghost.addEventListener("keydown", (e) => {
 els.ghost.addEventListener("paste", (e) => e.preventDefault());
 
 els.card.addEventListener("click", () => els.ghost.focus());
+function renderFocusNote(focused) {
+  const enter = mode.id === "hn"
+    ? '<kbd>⏎</kbd> saves the headline for later'
+    : '<kbd>⏎</kbd> skips';
+  els.focusNote.innerHTML =
+    (focused ? '' : 'Click here and start typing · ')
+    + 'end each line with <kbd>␣</kbd> · <kbd>⌫</kbd> corrects · ' + enter + ' · <kbd>esc</kbd> restarts';
+}
 els.ghost.addEventListener("focus", () => {
   els.card.classList.remove("unfocused");
-  els.focusNote.innerHTML = 'end each line with <kbd>␣</kbd> · <kbd>⌫</kbd> corrects · <kbd>⏎</kbd> skips · <kbd>esc</kbd> restarts';
+  renderFocusNote(true);
 });
 els.ghost.addEventListener("blur", () => {
   els.card.classList.add("unfocused");
-  els.focusNote.innerHTML = 'Click here and start typing · end each line with <kbd>␣</kbd> · <kbd>⌫</kbd> corrects · <kbd>esc</kbd> restarts';
+  renderFocusNote(false);
 });
 
 /* ---------------- Glove80 board ---------------- */
@@ -1555,8 +1632,11 @@ function defaultLayout() {
   return "us";
 }
 
-let osLayout = localStorage.getItem("tangent-oslayout") || defaultLayout();
+const savedOsLayout = store.getItem("tangent-oslayout");
+let osLayout = savedOsLayout || defaultLayout();
 if (!LAYOUTS[osLayout]) osLayout = defaultLayout();
+// first visit with a guessed non-US layout: say so next to the selector
+const osLayoutGuessed = !savedOsLayout && osLayout !== "us";
 
 const MUTED_LABELS = {
   TAB: "⇥", ESC: "⎋", BSPC: "⌫", DEL: "⌦", RET: "⏎", ENTER: "⏎",
@@ -2104,8 +2184,8 @@ function renderInsights() {
 document.getElementById("insReset").addEventListener("click", () => {
   confusions = {};
   attempts = {};
-  localStorage.removeItem("tangent-confusions");
-  localStorage.removeItem("tangent-attempts");
+  store.removeItem("tangent-confusions");
+  store.removeItem("tangent-attempts");
   renderInsights();
 });
 
@@ -2218,7 +2298,7 @@ keymapSel.addEventListener("change", () => {
 
 function applyKeymap(choice) {
   keymapChoice = choice;
-  localStorage.setItem("tangent-keymap-choice", choice);
+  store.setItem("tangent-keymap-choice", choice);
   boardCodes = (choice === "custom" && customCodes) ? customCodes : KEYMAPS[choice].codes;
   currentBoard = boardOf(choice);
   renderBoard(boardCodes);
@@ -2254,7 +2334,7 @@ const textSel = document.getElementById("textSel");
 }
 textSel.addEventListener("change", () => {
   textLang = textSel.value;
-  localStorage.setItem("tangent-textlang", textLang);
+  store.setItem("tangent-textlang", textLang);
   buildTabs(mode.id); // the letters-mode fallback label follows the text language
   newLine();
   els.ghost.focus();
@@ -2262,7 +2342,7 @@ textSel.addEventListener("change", () => {
 
 function applyLayout(id) {
   osLayout = id;
-  localStorage.setItem("tangent-oslayout", id);
+  store.setItem("tangent-oslayout", id);
   renderBoard(boardCodes);
   renderSheet();
   buildTabs(mode.id);
@@ -2360,17 +2440,17 @@ function importKeymapFile(f) {
   f.text().then(text => {
     try {
       const codes = parseKeymap(text);
-      localStorage.setItem("tangent-keymap", JSON.stringify(codes));
+      store.setItem("tangent-keymap", JSON.stringify(codes));
       customCodes = codes;
       keymapChoice = "custom";
-      localStorage.setItem("tangent-keymap-choice", "custom");
+      store.setItem("tangent-keymap-choice", "custom");
       boardCodes = codes;
       currentBoard = codes.length === 60 ? "go60" : "glove80";
       let note = "";
       const inferred = inferLayout(text);
       if (inferred && inferred !== osLayout) {
         osLayout = inferred;
-        localStorage.setItem("tangent-oslayout", inferred);
+        store.setItem("tangent-oslayout", inferred);
         layoutSel.value = inferred;
         note = " · OS input: " + LAYOUTS[inferred].name;
       }
@@ -2406,7 +2486,7 @@ boardWrap.addEventListener("drop", e => {
 
 let customCodes = null;
 try {
-  const saved = JSON.parse(localStorage.getItem("tangent-keymap"));
+  const saved = JSON.parse(store.getItem("tangent-keymap"));
   if (Array.isArray(saved) && (saved.length === 80 || saved.length === 60)) customCodes = saved;
 } catch (e) { /* none */ }
 // first visit: pick the factory keymap matching the visitor's OS
@@ -2414,7 +2494,7 @@ function defaultKeymap() {
   const mac = /Mac|iPhone|iPad/.test(navigator.platform || "") || /Macintosh/.test(navigator.userAgent);
   return mac ? "factory-mac" : "factory";
 }
-let keymapChoice = localStorage.getItem("tangent-keymap-choice") || defaultKeymap();
+let keymapChoice = store.getItem("tangent-keymap-choice") || defaultKeymap();
 if (!KEYMAPS[keymapChoice] && !(keymapChoice === "custom" && customCodes)) keymapChoice = defaultKeymap();
 let boardCodes = (keymapChoice === "custom") ? customCodes : KEYMAPS[keymapChoice].codes;
 currentBoard = boardOf(keymapChoice);
@@ -2424,7 +2504,7 @@ renderSheet();
 
 /* ---------------- custom text ---------------- */
 
-let customRaw = localStorage.getItem("tangent-custom") || "";
+let customRaw = store.getItem("tangent-custom") || "";
 function splitCustom(t) { return t.split(/\n+/).map(s => s.trim()).filter(Boolean); }
 let customLines = splitCustom(customRaw);
 
@@ -2433,7 +2513,8 @@ function genCustom() {
   if (!customLines.length) return "paste your own text in the box above, then start typing";
   let line = pick(customLines);
   if (customLines.length > 1) {
-    while (line === lastCustom) line = pick(customLines);
+    // bounded: the remaining lines may all be identical to the last one
+    for (let i = 0; i < 20 && line === lastCustom; i++) line = pick(customLines);
   }
   lastCustom = line;
   return line;
@@ -2459,7 +2540,7 @@ customText.value = customRaw;
 
 customText.addEventListener("input", () => {
   customRaw = customText.value;
-  localStorage.setItem("tangent-custom", customRaw);
+  store.setItem("tangent-custom", customRaw);
   customLines = splitCustom(customRaw);
   if (mode.id === "custom" && els.ghost.value === "") newLine();
 });
@@ -2517,7 +2598,7 @@ function updateFeedPanel() {
 }
 
 function applyFeed() {
-  localStorage.setItem("tangent-feed", JSON.stringify(feedCfg));
+  store.setItem("tangent-feed", JSON.stringify(feedCfg));
   feedGen++;
   hnQueue = [];
   hnError = false;
@@ -2560,6 +2641,11 @@ loadBest();
 renderInsights();
 renderReadList();
 updateCustomPanel();
+if (osLayoutGuessed) {
+  importMsg.textContent = "OS input guessed from your browser: " + LAYOUTS[osLayout].name + " — change it if wrong";
+  setTimeout(() => { if (importMsg.textContent.startsWith("OS input guessed")) importMsg.textContent = ""; }, 15000);
+}
+renderFocusNote(false);
 newLine();
 els.ghost.focus();
 </script>
