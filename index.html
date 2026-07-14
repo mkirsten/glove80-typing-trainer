@@ -516,17 +516,25 @@
     margin: 18px 6px 8px;
   }
   .about-note a { color: var(--blue); }
-  /* a plain line of text, not the boxed panel `details` gets by default */
+  /* a button, not the boxed panel `details` gets by default */
   .demo { margin: 0 0 12px; border: none; background: none; }
   .demo summary {
-    display: inline-flex; align-items: center; gap: 8px;
-    color: var(--muted); font-size: .85rem; cursor: pointer;
-    list-style: none; padding: 2px 0;
+    display: inline-flex; align-items: center; gap: 9px;
+    border: 1px solid var(--blue);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: .88rem; font-weight: 600;
+    cursor: pointer; list-style: none;
+    transition: background .15s, color .15s;
   }
+  .demo summary:hover { background: var(--blue); color: var(--blue-ink); }
   .demo summary::-webkit-details-marker { display: none; }
-  .demo summary::before { content: "▸"; color: var(--blue); transition: transform .15s; }
-  .demo[open] summary::before { transform: rotate(90deg); }
-  @media (prefers-reduced-motion: reduce) { .demo summary::before { transition: none; } }
+  .demo summary::before { content: "▶"; color: var(--blue); font-size: .8em; }
+  .demo summary:hover::before { color: var(--blue-ink); }
+  .demo[open] summary::before { content: "✕"; font-size: .9em; }
+  @media (prefers-reduced-motion: reduce) { .demo summary { transition: none; } }
   .demo video {
     display: block; width: 100%; max-width: 900px;
     margin: 10px 0 0; border: 1px solid var(--line); border-radius: 10px;
@@ -547,9 +555,9 @@
 
   <p class="mobile-note">Tangent teaches finger placement on a physical keyboard — it works best on a laptop or desktop. The demo below shows what it does.</p>
 
-  <details class="demo">
-    <summary>Watch a 35-second demo — hunting for keys at 39 wpm, up to 81</summary>
-    <video controls preload="none" playsinline poster="screenshot.png">
+  <details class="demo" id="demo">
+    <summary>Watch the 35-second demo</summary>
+    <video id="demoVideo" controls preload="none" playsinline muted poster="screenshot.png">
       <source src="tangent-demo.mp4" type="video/mp4">
     </video>
   </details>
@@ -2672,6 +2680,22 @@ if (osLayoutGuessed) {
 renderFocusNote(false);
 newLine();
 els.ghost.focus();
+
+/* ---------------- demo video ---------------- */
+
+// opening the panel is the click, so start playing right there; closing it
+// rewinds, and typing keeps working because the video never takes focus
+const demo = document.getElementById("demo");
+const demoVideo = document.getElementById("demoVideo");
+demo.addEventListener("toggle", () => {
+  if (demo.open) {
+    demoVideo.play().catch(() => { /* let the controls handle it */ });
+  } else {
+    demoVideo.pause();
+    demoVideo.currentTime = 0;
+    els.ghost.focus();
+  }
+});
 </script>
 </body>
 </html>
