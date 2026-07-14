@@ -2,7 +2,11 @@
 
 A typing trainer built for the [MoErgo Glove80](https://www.moergo.com/) split ergonomic keyboard. Practise your layout with an on-screen Glove80 that shows exactly **which key and which finger** to use, drawn from the keyboard's real physical geometry.
 
-**Try it: [tangent-trainer.pages.dev](https://tangent-trainer.pages.dev/)** — it's a single HTML file, no build, no server, no tracking. Everything runs locally in your browser; the only network calls fetch headlines (Hacker News mode uses the public [Algolia HN API](https://hn.algolia.com/api), and custom RSS feeds fall back to rss2json.com when the feed doesn't send CORS headers).
+**Try it: [tangent-trainer.pages.dev](https://tangent-trainer.pages.dev/)** — it's a single HTML file. No build step, no backend, no account, no cookies, no ad trackers.
+
+Everything you do stays in your browser: your stats, personal bests, weak-key history, reading list and imported keymaps live in `localStorage`, which — unlike a cookie — is never sent to any server. The page makes exactly two kinds of network call, both for drill text: headlines from the public [Algolia HN API](https://hn.algolia.com/api), and, if you point it at your own RSS feed, a fallback through rss2json.com for feeds that don't send CORS headers. The hosted copy also counts page views with Cloudflare's cookieless Web Analytics.
+
+**Prefer none of that? Download [`index.html`](index.html) and open it locally.** That single file *is* the app — it runs offline (only the headline modes need the network), and nothing phones home.
 
 ![Tangent screenshot](screenshot.png)
 
