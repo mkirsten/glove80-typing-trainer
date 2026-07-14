@@ -509,6 +509,14 @@
   }
   @media (pointer: coarse) {
     .mobile-note { display: block; }
+    /* on a touch screen the trainer itself is the thing you can't use, so the
+       demo is the call to action — not whichever drill mode happens to be on.
+       `details.demo` outweighs the base `.demo summary` rule further down. */
+    details.demo summary { background: var(--blue); color: var(--blue-ink); }
+    details.demo summary::before { color: var(--blue-ink); }
+    .tab[aria-selected="true"] {
+      background: var(--surface); color: var(--ink); border-color: var(--line);
+    }
   }
   .about-note {
     color: var(--muted);
@@ -557,7 +565,7 @@
 
   <details class="demo" id="demo">
     <summary>Watch the 35-second demo</summary>
-    <video id="demoVideo" controls preload="none" playsinline muted poster="screenshot.png">
+    <video id="demoVideo" controls preload="none" playsinline poster="screenshot.png">
       <source src="tangent-demo.mp4" type="video/mp4">
     </video>
   </details>
@@ -2679,7 +2687,10 @@ if (osLayoutGuessed) {
 }
 renderFocusNote(false);
 newLine();
-els.ghost.focus();
+// On a phone, focusing the input scrolls the page past the header and throws
+// up the soft keyboard — so the visitor lands below the one thing that is
+// useful to them there (the demo). Let them tap in themselves.
+if (!matchMedia("(pointer: coarse)").matches) els.ghost.focus();
 
 /* ---------------- demo video ---------------- */
 
