@@ -8,9 +8,9 @@ Everything you do stays in your browser: your stats, personal bests, weak-key hi
 
 **Prefer none of that? Download [`index.html`](index.html) and open it locally.** That single file *is* the app — it runs offline (only the headline modes need the network), and nothing phones home.
 
-![Tangent: typing a Hacker News headline on the on-screen Glove80, correcting mistakes, and climbing from 39 to 81 wpm across English and Swedish lines](tangent-demo.gif)
+![Tangent: typing a Hacker News headline on the on-screen Glove80, correcting mistakes, and climbing from 37 to 83 wpm across English and Swedish lines](tangent-demo.gif)
 
-*Hunting for keys at 39 wpm — the board points at the key you missed and which way to move — then 57, then 81, ending on a Swedish line.*
+*Hunting for keys at 37 wpm — the board points at the key you missed and which way to move — then 59, then 83, ending where it should: "Practice slowly and accurately; speed will follow."*
 
 ## Features
 
