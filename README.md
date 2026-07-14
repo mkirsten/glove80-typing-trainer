@@ -8,9 +8,9 @@ Everything you do stays in your browser: your stats, personal bests, weak-key hi
 
 **Prefer none of that? Download [`index.html`](index.html) and open it locally.** That single file *is* the app — it runs offline (only the headline modes need the network), and nothing phones home.
 
-![Tangent screenshot](screenshot.png)
+![Tangent: typing a Hacker News headline on the on-screen Glove80, going from 21 wpm to 61 wpm, then a Swedish drill and a stoic line about practising slowly](tangent-demo.gif)
 
-[Watch the 1-minute demo](tangent-demo.mp4) — going from hunting for keys at 20 wpm to 70 wpm, in Hacker News mode.
+*Hunting for keys at 21 wpm, then 37, then 61 — Hacker News mode, an åäö drill, and a line worth taking to heart. ([mp4](tangent-demo.mp4), [still](screenshot.png))*
 
 ## Features
 
