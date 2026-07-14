@@ -10,7 +10,7 @@ Everything you do stays in your browser: your stats, personal bests, weak-key hi
 
 ![Tangent: typing a Hacker News headline on the on-screen Glove80, correcting mistakes, and climbing from 39 to 81 wpm across English and Swedish lines](tangent-demo.gif)
 
-*Hunting for keys at 39 wpm — the board points at the key you missed and which way to move — then 57, then 81, ending on a Swedish line. ([mp4](tangent-demo.mp4), [still](screenshot.png))*
+*Hunting for keys at 39 wpm — the board points at the key you missed and which way to move — then 57, then 81, ending on a Swedish line.*
 
 ## Features
 
