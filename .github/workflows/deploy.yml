@@ -15,12 +15,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # the site is the page and the two files it asks for — the README,
-      # the gif it embeds and the keymap json stay out of the upload
+      # everything ships unless it's named below, so a new asset needs no
+      # thought here — the list is repo furniture the site never asks for
       - name: Assemble the site
         run: |
-          mkdir dist
-          cp index.html tangent-demo.mp4 screenshot.png dist/
+          rsync -a ./ dist/ \
+            --exclude '.git*' \
+            --exclude '.wrangler' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude 'README.md' \
+            --exclude 'LICENSE' \
+            --exclude 'factory-default-macos.json' \
+            --exclude 'tangent-demo.gif'
+          echo "shipping:" && ls -la dist/
 
       - uses: cloudflare/wrangler-action@v3
         with:
