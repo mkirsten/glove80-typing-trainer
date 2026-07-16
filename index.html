@@ -2545,19 +2545,31 @@ renderSheet();
 /* ---------------- custom text ---------------- */
 
 let customRaw = store.getItem("tangent-custom") || "";
-function splitCustom(t) { return t.split(/\n+/).map(s => s.trim()).filter(Boolean); }
+function splitCustom(t) {
+  return [...new Set(t.split(/\n+/).map(s => s.trim()).filter(Boolean))];
+}
 let customLines = splitCustom(customRaw);
 
+// draw from a shuffled bag, so every line comes up once before any comes up again
+let customBag = [];
 let lastCustom = null;
+function refillCustomBag() {
+  customBag = customLines.slice();
+  for (let i = customBag.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [customBag[i], customBag[j]] = [customBag[j], customBag[i]];
+  }
+  // the seam between two bags is the one place a line could still repeat
+  if (customBag.length > 1 && customBag[0] === lastCustom) {
+    const j = 1 + Math.floor(Math.random() * (customBag.length - 1));
+    [customBag[0], customBag[j]] = [customBag[j], customBag[0]];
+  }
+}
 function genCustom() {
   if (!customLines.length) return "paste your own text in the box above, then start typing";
-  let line = pick(customLines);
-  if (customLines.length > 1) {
-    // bounded: the remaining lines may all be identical to the last one
-    for (let i = 0; i < 20 && line === lastCustom; i++) line = pick(customLines);
-  }
-  lastCustom = line;
-  return line;
+  if (!customBag.length) refillCustomBag();
+  lastCustom = customBag.shift();
+  return lastCustom;
 }
 
 function buildPrompt() {
@@ -2582,6 +2594,7 @@ customText.addEventListener("input", () => {
   customRaw = customText.value;
   store.setItem("tangent-custom", customRaw);
   customLines = splitCustom(customRaw);
+  customBag = []; // the old bag may hold lines that were just edited away
   if (mode.id === "custom" && els.ghost.value === "") newLine();
 });
 
