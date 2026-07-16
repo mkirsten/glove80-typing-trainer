@@ -30,7 +30,10 @@ jobs:
             --exclude 'tangent-demo.gif'
           echo "shipping:" && ls -la dist/
 
-      - uses: cloudflare/wrangler-action@v3
+      # dormant until the token secret exists, rather than red on every push
+      - name: Deploy
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -38,3 +41,9 @@ jobs:
             pages deploy dist
             --project-name=tangent-trainer
             --branch=main
+
+      - name: Say why nothing shipped
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN == '' }}
+        run: |
+          echo "::notice::No CLOUDFLARE_API_TOKEN secret set, so nothing was deployed. \
+          Add the secret and this workflow starts shipping every push to main."
