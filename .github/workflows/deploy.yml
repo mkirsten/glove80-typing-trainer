@@ -12,6 +12,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # `if` can read env but not secrets, so the secret comes through here
+    env:
+      HAVE_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +35,7 @@ jobs:
 
       # dormant until the token secret exists, rather than red on every push
       - name: Deploy
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        if: env.HAVE_TOKEN == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -43,7 +46,6 @@ jobs:
             --branch=main
 
       - name: Say why nothing shipped
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN == '' }}
+        if: env.HAVE_TOKEN != 'true'
         run: |
-          echo "::notice::No CLOUDFLARE_API_TOKEN secret set, so nothing was deployed. \
-          Add the secret and this workflow starts shipping every push to main."
+          echo "::notice::No CLOUDFLARE_API_TOKEN secret set, so nothing was deployed. Add the secret and this workflow starts shipping every push to main."
