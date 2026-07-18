@@ -1000,7 +1000,7 @@ function genIntl() {
 const MODES = [
   { id: "hn",      label: () => feedCfg.type === "rss" ? "RSS feed" : "Hacker News", gen: () => genHN() },
   { id: "text",    label: () => "Normal text",       gen: () => genText() },
-  { id: "symbols", label: () => "Symbols & code",    gen: () => pick(SYMBOL_LINES) },
+  { id: "symbols", label: () => "Symbols & code",    gen: () => deal(SYMBOL_LINES) },
   { id: "letters", label: () => intlLabel(),         gen: () => genIntl() },
   { id: "focus",   label: () => "Weak keys",         gen: () => genFocus() },
   { id: "custom",  label: () => "Your text",          gen: () => genCustom() }
@@ -1009,12 +1009,33 @@ const MODES = [
 // mostly stoic wisdom, with pangrams and plain common-word lines sprinkled in
 function genText() {
   const r = Math.random();
-  if (r < 0.7) return pick(pack().quotes);
-  if (r < 0.85) return pick(pack().sentences);
+  if (r < 0.7) return deal(pack().quotes);
+  if (r < 0.85) return deal(pack().sentences);
   return pickWords(pack().commonWords, 9);
 }
 
 function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
+
+// deal from a shuffled bag per list, so every entry comes up once before any repeats
+const dealState = new WeakMap();
+function deal(list) {
+  let st = dealState.get(list);
+  if (!st) { st = { bag: [], last: null }; dealState.set(list, st); }
+  if (!st.bag.length) {
+    st.bag = list.slice();
+    for (let i = st.bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [st.bag[i], st.bag[j]] = [st.bag[j], st.bag[i]];
+    }
+    // the seam between two bags is the one place an entry could still repeat
+    if (st.bag.length > 1 && st.bag[0] === st.last) {
+      const j = 1 + Math.floor(Math.random() * (st.bag.length - 1));
+      [st.bag[0], st.bag[j]] = [st.bag[j], st.bag[0]];
+    }
+  }
+  st.last = st.bag.shift();
+  return st.last;
+}
 function pickWords(pool, n) {
   const out = [];
   let guard = n * 20; // bail out if the pool is too small to avoid repeats
@@ -1039,14 +1060,19 @@ let prevStory = null;
 let readList = [];
 try { readList = JSON.parse(store.getItem("tangent-readlist")) || []; } catch (e) { /* fresh */ }
 
-function sanitizeHeadline(t) {
+// fold typography no keyboard has (curly quotes, long dashes) onto real keys
+function foldTypography(t) {
   return t
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[–—]/g, "-")
     .replace(/×/g, "x")
     .replace(/…/g, "...")
-    .replace(/ /g, " ")
+    .replace(/\u00A0/g, " ");
+}
+
+function sanitizeHeadline(t) {
+  return foldTypography(t)
     .replace(/[^\x20-\x7EåäöÅÄÖæÆøØüÜßéÉèÈêÊëËçÇàÀâÂùÙûÛîÎïÏôÔñÑíÍóÓúÚ¿¡]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -1246,11 +1272,13 @@ function buildTabs(selectedId) {
 
 /* ---------------- line lifecycle ---------------- */
 
+function typeable(t) { return [...t].every(c => c === " " || charKeyMap[c]); }
+
 function newLine() {
   // re-roll lines containing characters this layout can't type on this board
   let t = mode.gen();
   for (let i = 0; i < 8; i++) {
-    if ([...t].every(c => c === " " || charKeyMap[c])) break;
+    if (typeable(t)) break;
     t = mode.gen();
   }
   target = t + " ";
@@ -2383,6 +2411,7 @@ textSel.addEventListener("change", () => {
 function applyLayout(id) {
   osLayout = id;
   store.setItem("tangent-oslayout", id);
+  customPool = null; // which lines are typeable depends on the layout
   renderBoard(boardCodes);
   renderSheet();
   buildTabs(mode.id);
@@ -2546,30 +2575,22 @@ renderSheet();
 
 let customRaw = store.getItem("tangent-custom") || "";
 function splitCustom(t) {
-  return [...new Set(t.split(/\n+/).map(s => s.trim()).filter(Boolean))];
+  return [...new Set(
+    t.split(/\n+/).map(s => foldTypography(s).replace(/\s+/g, " ").trim()).filter(Boolean)
+  )];
 }
 let customLines = splitCustom(customRaw);
 
-// draw from a shuffled bag, so every line comes up once before any comes up again
-let customBag = [];
-let lastCustom = null;
-function refillCustomBag() {
-  customBag = customLines.slice();
-  for (let i = customBag.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [customBag[i], customBag[j]] = [customBag[j], customBag[i]];
-  }
-  // the seam between two bags is the one place a line could still repeat
-  if (customBag.length > 1 && customBag[0] === lastCustom) {
-    const j = 1 + Math.floor(Math.random() * (customBag.length - 1));
-    [customBag[0], customBag[j]] = [customBag[j], customBag[0]];
-  }
-}
+// deal only lines this layout can type — a line skipped by newLine's re-roll
+// would silently eat the bag and put the dealing order back to random
+let customPool = null;
 function genCustom() {
   if (!customLines.length) return "paste your own text in the box above, then start typing";
-  if (!customBag.length) refillCustomBag();
-  lastCustom = customBag.shift();
-  return lastCustom;
+  if (!customPool) {
+    const usable = customLines.filter(typeable);
+    customPool = usable.length ? usable : customLines;
+  }
+  return deal(customPool);
 }
 
 function buildPrompt() {
@@ -2594,7 +2615,7 @@ customText.addEventListener("input", () => {
   customRaw = customText.value;
   store.setItem("tangent-custom", customRaw);
   customLines = splitCustom(customRaw);
-  customBag = []; // the old bag may hold lines that were just edited away
+  customPool = null; // the old pool may hold lines that were just edited away
   if (mode.id === "custom" && els.ghost.value === "") newLine();
 });
 
