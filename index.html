@@ -212,6 +212,23 @@
     font-size: 1.5rem; font-weight: 600;
   }
 
+  /* ---- session sparkline ---- */
+  .spark {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px 6px;
+  }
+  .spark .label {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--muted); font-weight: 600;
+  }
+  .spark svg { width: 100%; height: auto; display: block; margin-top: 4px; }
+  .spark-line { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .spark-avg { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
+  .spark-dot { fill: var(--blue); }
+  .spark-hit { fill: transparent; }
+
   /* ---- insights ---- */
   .insights {
     background: var(--surface);
@@ -582,8 +599,6 @@
   .board.course .key.lockedkey { opacity: .3; }
   .board.course .key.focuskey { box-shadow: inset 0 0 0 2px var(--yellow); }
 
-  /* ---- pace ghost: your personal best sweeping through the line ---- */
-  .prompt .ghost { box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--blue) 70%, transparent); }
 </style>
 
 <body>
@@ -680,6 +695,11 @@
       <div class="stat"><div class="label">Accuracy</div><div class="value" id="acc">–<small> %</small></div></div>
       <div class="stat"><div class="label">Lines done</div><div class="value" id="lines">0</div></div>
       <div class="stat"><div class="label">Best</div><div class="value" id="best">–<small> wpm</small></div></div>
+    </div>
+
+    <div class="spark" id="sparkWrap" hidden>
+      <div class="label">Speed per line — this session</div>
+      <svg id="sparkSvg" viewBox="0 0 260 44" role="img" aria-label="Speed per line this session"></svg>
     </div>
 
     <div class="result" id="result"></div>
@@ -1280,6 +1300,7 @@ let linesDone = 0;
 let composing = false;
 let lastStroke = null;  // when the previous character landed — feeds per-key speed
 let lineTimes = [];     // per-position inter-key times for this line, for slow words
+let lineHistory = [];   // wpm per finished line this session, for the sparkline
 
 const bestKey = m => "tangent-best-" + m.id;
 function loadBest() {
@@ -1305,6 +1326,8 @@ function buildTabs(selectedId) {
       linesDone = 0;
       els.lines.textContent = "0";
       els.result.textContent = "";
+      lineHistory = [];
+      renderSpark();
       loadBest();
       updateCustomPanel();
       newLine();
@@ -1332,7 +1355,6 @@ function newLine() {
   prevLen = 0;
   lastStroke = null;
   lineTimes = [];
-  stopGhost();
   els.ghost.value = "";
   render("");
 }
@@ -1347,6 +1369,9 @@ function finishLine(typed) {
   els.lines.textContent = linesDone;
   els.wpm.innerHTML = wpm + "<small> wpm</small>";
   els.acc.innerHTML = acc + "<small> %</small>";
+  lineHistory.push(wpm);
+  if (lineHistory.length > 40) lineHistory.shift();
+  renderSpark();
 
   const prev = Number(store.getItem(bestKey(mode)) || 0);
   let pb = "";
@@ -1355,13 +1380,8 @@ function finishLine(typed) {
     loadBest();
     pb = ' <span class="pb">new personal best!</span>';
   }
-  const ghostTxt = prev > 0
-    ? (secs < target.length / (prev * 5 / 60)
-        ? " You stayed ahead of your record-pace ghost."
-        : " The record-pace ghost got there first.")
-    : "";
   els.result.innerHTML =
-    "Line done: <strong>" + wpm + " wpm</strong> at <strong>" + acc + " %</strong> accuracy." + pb + ghostTxt;
+    "Line done: <strong>" + wpm + " wpm</strong> at <strong>" + acc + " %</strong> accuracy." + pb;
 
   collectSlowWords();
   if (wrongStrokes === 0) {
@@ -1426,48 +1446,55 @@ function render(typed) {
     frag.appendChild(s);
   }
   els.prompt.replaceChildren(frag);
-  applyGhost();
   updateHint(target[typed.length]);
 }
 
-/* ---------------- pace ghost: race your own record ---------------- */
+// quiet trend line in the sidebar: wpm per finished line, dashed session average
+function renderSpark() {
+  const wrap = document.getElementById("sparkWrap");
+  if (lineHistory.length < 2) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  const svg = document.getElementById("sparkSvg");
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 260, H = 44, P = 5;
+  const lo = Math.min(...lineHistory), hi = Math.max(...lineHistory);
+  const span = Math.max(hi - lo, 4); // a flat session still draws mid-box
+  const pad = (span - (hi - lo)) / 2;
+  const x = i => P + i * (W - 2 * P) / (lineHistory.length - 1);
+  const y = v => H - P - (v - lo + pad) * (H - 2 * P) / span;
+  svg.replaceChildren();
 
-// a second cursor sweeps the line at your personal-best pace for this mode
-let ghostRaf = null;
-let ghostIdx = -1;
+  const avg = lineHistory.reduce((a, b) => a + b, 0) / lineHistory.length;
+  const al = document.createElementNS(NS, "line");
+  al.setAttribute("x1", P); al.setAttribute("x2", W - P);
+  al.setAttribute("y1", y(avg)); al.setAttribute("y2", y(avg));
+  al.setAttribute("class", "spark-avg");
+  svg.appendChild(al);
 
-function ghostCps() {
-  const best = Number(store.getItem(bestKey(mode)) || 0);
-  return best > 0 ? best * 5 / 60 : 0;
-}
+  const pl = document.createElementNS(NS, "polyline");
+  pl.setAttribute("points", lineHistory.map((v, i) => x(i) + "," + y(v)).join(" "));
+  pl.setAttribute("class", "spark-line");
+  svg.appendChild(pl);
 
-function startGhost() {
-  stopGhost();
-  if (ghostCps() > 0) ghostRaf = requestAnimationFrame(tickGhost);
-}
+  const dot = document.createElementNS(NS, "circle");
+  dot.setAttribute("cx", x(lineHistory.length - 1));
+  dot.setAttribute("cy", y(lineHistory[lineHistory.length - 1]));
+  dot.setAttribute("r", 3);
+  dot.setAttribute("class", "spark-dot");
+  svg.appendChild(dot);
 
-function stopGhost() {
-  if (ghostRaf) cancelAnimationFrame(ghostRaf);
-  ghostRaf = null;
-  ghostIdx = -1;
-}
-
-function tickGhost() {
-  const cps = ghostCps();
-  if (!cps || startTime === null) { ghostRaf = null; return; }
-  const i = Math.floor((performance.now() - startTime) / 1000 * cps);
-  if (i !== ghostIdx) {
-    ghostIdx = i;
-    applyGhost();
-  }
-  ghostRaf = i <= target.length ? requestAnimationFrame(tickGhost) : null;
-}
-
-function applyGhost() {
-  for (const s of els.prompt.querySelectorAll(".ghost")) s.classList.remove("ghost");
-  if (ghostRaf === null || ghostIdx < 0) return;
-  const spans = els.prompt.children;
-  if (ghostIdx < spans.length) spans[ghostIdx].classList.add("ghost");
+  // native tooltips on hover, with hit areas wider than the marks
+  const slot = (W - 2 * P) / (lineHistory.length - 1);
+  lineHistory.forEach((v, i) => {
+    const r = document.createElementNS(NS, "rect");
+    r.setAttribute("x", x(i) - slot / 2); r.setAttribute("y", 0);
+    r.setAttribute("width", slot); r.setAttribute("height", H);
+    r.setAttribute("class", "spark-hit");
+    const t = document.createElementNS(NS, "title");
+    t.textContent = v + " wpm (line " + (i + 1 + Math.max(0, linesDone - lineHistory.length)) + ")";
+    r.appendChild(t);
+    svg.appendChild(r);
+  });
 }
 
 function updateHint(ch) {
@@ -1535,10 +1562,7 @@ function handleInput() {
   if (!composing && els.ghost.selectionStart !== typed.length) {
     els.ghost.setSelectionRange(typed.length, typed.length);
   }
-  if (typed.length > 0 && startTime === null) {
-    startTime = performance.now();
-    startGhost();
-  }
+  if (typed.length > 0 && startTime === null) startTime = performance.now();
 
   if (typed.length > prevLen && !composing) {
     const i = typed.length - 1;
@@ -2587,9 +2611,13 @@ function genCourse() {
   const focusPool = pool.filter(w => w.includes(focus));
   const out = [];
   for (let i = 0; i < 7; i++) {
-    const useFocus = focusPool.length && Math.random() < 0.5;
-    let w = useFocus ? pick(focusPool) : pool.length ? pick(pool) : null;
-    if (!w || (!useFocus && Math.random() < 0.2)) w = pseudoWord(unlocked, focus);
+    // small pools early on make repeats likely — re-draw rather than stutter
+    let w = null;
+    for (let tries = 0; tries < 8 && (w === null || w === out[out.length - 1]); tries++) {
+      const useFocus = focusPool.length && Math.random() < 0.5;
+      w = useFocus ? pick(focusPool) : pool.length ? pick(pool) : null;
+      if (!w || (!useFocus && Math.random() < 0.2)) w = pseudoWord(unlocked, focus);
+    }
     out.push(w);
   }
   return out.join(" ");
@@ -2802,6 +2830,8 @@ function applyLayout(id) {
   linesDone = 0;
   els.lines.textContent = "0";
   els.result.textContent = "";
+  lineHistory = [];
+  renderSpark();
   loadBest();
   newLine();
   els.ghost.focus();
