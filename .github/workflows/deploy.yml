@@ -18,6 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # build fresh from src/ so the shipped page can never lag behind the
+      # modules, even if someone forgot to commit the built index.html
+      - name: Build index.html from src
+        run: node build.mjs
+
       # everything ships unless it's named below, so a new asset needs no
       # thought here — the list is repo furniture the site never asks for
       - name: Assemble the site
@@ -27,6 +32,8 @@ jobs:
             --exclude '.wrangler' \
             --exclude 'node_modules' \
             --exclude 'dist' \
+            --exclude 'src' \
+            --exclude 'build.mjs' \
             --exclude 'README.md' \
             --exclude 'LICENSE' \
             --exclude 'factory-default-macos.json' \

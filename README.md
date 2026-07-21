@@ -30,6 +30,39 @@ Open `index.html` in a browser (or use the hosted page above). Click the card, s
 
 Pick your **Keymap** (QWERTY factory default, Colemak, Colemak-DH, Dvorak, Workman, or an imported file), your **OS input** source, and optionally a **Text** language for the generated lines.
 
+## Code structure
+
+The app ships as a single `index.html`, but it is **edited as modules** under `src/`:
+
+```
+src/
+  page.html       HTML skeleton (head, body, injection markers)
+  style.css       all styling
+  js/             one file per concern, concatenated in order:
+    store.js        localStorage probe with in-memory fallback
+    content.js      drill text: word lists, quotes, language packs
+    generators.js   line generators: modes, pick/deal, pseudo-words
+    feed.js         Hacker News / RSS headlines and the reading list
+    state.js        shared typing state, stat elements, mode tabs
+    typing.js       line lifecycle, prompt rendering, session sparkline
+    input.js        keystroke handling and per-stroke bookkeeping
+    board.js        Glove80/Go60 geometry, key rendering, miss flashes
+    insights.js     problem-key analysis and advice
+    review.js       miss bag and the Weak keys drill
+    course.js       guided learn-the-board course
+    keymap.js       keymap/layout import, selects, cheat sheet
+    custom.js       custom text panel and headline source panel
+    main.js         init and the demo video
+```
+
+After editing, rebuild the single file with:
+
+```
+node build.mjs
+```
+
+No dependencies, no npm install — the script just concatenates. The committed `index.html` is the built artifact, kept in the repo so the download-one-file promise above stays true.
+
 ## Keywords
 
 Glove80 typing trainer · MoErgo Glove80 practice · learn Glove80 keymap · ZMK keymap trainer · split ergonomic keyboard typing practice · Swedish åäö typing practice · Layout Editor import

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Tangent · Glove80 typing trainer</title>
+<meta name="description" content="Typing trainer for the MoErgo Glove80 split ergonomic keyboard. On-screen board with finger guidance, ZMK keymap and Layout Editor import, international layouts, and drills that target your weak keys.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%232B6CB8'/%3E%3Ctext x='50' y='72' font-size='64' font-family='monospace' font-weight='700' text-anchor='middle' fill='%23fff'%3ET%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="Tangent · Glove80 typing trainer">
+<meta property="og:description" content="Typing trainer for the MoErgo Glove80 split ergonomic keyboard, with finger guidance, ZMK keymap import, and drills that target your weak keys.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tangent-trainer.pages.dev/">
+<link rel="canonical" href="https://tangent-trainer.pages.dev/">
+<meta property="og:image" content="https://tangent-trainer.pages.dev/screenshot.png">
+<meta name="twitter:card" content="summary_large_image">
+<!-- @style -->
+
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tangent<span class="dot">.</span></h1>
+    <span class="sub">Glove80 typing trainer</span>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <a class="gh-btn" href="https://github.com/mkirsten/glove80-typing-trainer" target="_blank" rel="noopener" title="Source on GitHub — a single HTML file">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </header>
+
+  <p class="mobile-note">Tangent teaches finger placement on a physical keyboard — it works best on a laptop or desktop. The demo below shows what it does.</p>
+
+  <details class="demo" id="demo">
+    <summary>Watch the 45-second demo</summary>
+    <video id="demoVideo" controls preload="none" playsinline poster="screenshot.png">
+      <source src="tangent-demo.mp4" type="video/mp4">
+    </video>
+  </details>
+
+  <div class="layout">
+  <div class="main-col">
+  <div class="course-strip" id="coursePanel" hidden>
+    <div class="cs-keys" id="courseKeys"></div>
+    <div class="cs-status" id="courseStatus"></div>
+  </div>
+  <div class="card" id="card">
+    <div class="prompt-scroll"><div class="prompt mono" id="prompt" aria-live="off"></div></div>
+    <div class="focus-note" id="focusNote">Click here and start typing · end each line with <kbd>␣</kbd> · <kbd>⌫</kbd> corrects · <kbd>esc</kbd> restarts</div>
+  </div>
+  <input id="ghost" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Typing input">
+
+  <div class="custom-panel" id="feedPanel" hidden>
+    <div class="cp-head">
+      <span class="cp-title">Headline source</span>
+    </div>
+    <div class="feed-row">
+      <select id="feedSel" class="layoutsel">
+        <option value="hn">Hacker News</option>
+        <option value="rss">RSS feed…</option>
+      </select>
+      <input id="feedUrl" class="feed-url" type="url" placeholder="https://example.com/feed.xml" spellcheck="false" hidden>
+      <button class="btn" id="feedLoad" hidden>Load</button>
+    </div>
+    <div class="cp-msg" id="feedMsg"></div>
+  </div>
+
+  <div class="custom-panel" id="customPanel" hidden>
+    <div class="cp-head">
+      <span class="cp-title">Your text</span>
+      <button class="btn" id="copyPromptBtn">Copy LLM prompt</button>
+    </div>
+    <textarea id="customText" class="cp-text mono" placeholder="Paste text here — one line per drill.&#10;&#10;Tip: click “Copy LLM prompt”, paste it into ChatGPT / Claude / any LLM, then paste the reply back here."></textarea>
+    <div class="cp-msg" id="customMsg"></div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board-bar">
+      <label class="bb-item">Keymap
+        <select id="keymapSel" class="layoutsel" title="Standard Glove80 layouts, or import a MoErgo Layout Editor JSON export / ZMK .keymap file"></select>
+      </label>
+      <label class="bb-item">OS input
+        <select id="layoutSel" class="layoutsel" title="The input source your OS is set to — it turns key codes into characters. Detected automatically from imported Layout Editor files."></select>
+      </label>
+      <label class="bb-item">Text
+        <select id="textSel" class="layoutsel" title="Language of the generated practice lines"></select>
+      </label>
+      <input type="file" id="filePick" accept=".json,.keymap,.txt,.dtsi" hidden>
+      <span class="bb-item" id="importMsg"></span>
+    </div>
+    <div class="coordbar">
+      <span class="cgroup" id="coordText"></span>
+    </div>
+    <div class="board-fit" id="boardFit"><div class="board" id="board"></div></div>
+    <p class="board-note" id="boardNote">Key legends: base character in the middle · shift symbol top-left · <span class="optnote">⌥ symbol bottom-right</span></p>
+    <p class="board-note finger-legend" aria-hidden="true">Finger:
+      <span class="fl f-pinky">pinky</span>
+      <span class="fl f-ring">ring</span>
+      <span class="fl f-middle">middle</span>
+      <span class="fl f-index">index</span>
+      <span class="fl f-thumb">thumb</span>
+      <span class="fl rest">rest position</span>
+    </p>
+    <div class="bigdir" id="bigDir" aria-hidden="true"></div>
+  </div>
+  </div>
+
+  <aside class="side-col">
+    <div class="stats">
+      <div class="stat"><div class="label">Speed</div><div class="value" id="wpm">–<small> wpm</small></div></div>
+      <div class="stat"><div class="label">Accuracy</div><div class="value" id="acc">–<small> %</small></div></div>
+      <div class="stat"><div class="label">Lines done</div><div class="value" id="lines">0</div></div>
+      <div class="stat"><div class="label">Best</div><div class="value" id="best">–<small> wpm</small></div></div>
+    </div>
+
+    <div class="spark" id="sparkWrap" hidden>
+      <div class="label">Speed per line — this session</div>
+      <svg id="sparkSvg" viewBox="0 0 260 44" role="img" aria-label="Speed per line this session"></svg>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <div class="insights">
+      <div class="ins-head">Insights — your problem keys
+        <button class="linkbtn" id="insReset">reset stats</button>
+      </div>
+      <div class="ins-body" id="insBody"></div>
+    </div>
+
+    <div class="insights">
+      <div class="ins-head">Reading list
+        <button class="linkbtn" id="rlClear">clear</button>
+      </div>
+      <div class="rl-body" id="rlBody"></div>
+    </div>
+  </aside>
+  </div>
+
+  <details id="sheet">
+    <summary>Layout cheat sheet</summary>
+    <div class="sheet" id="sheetBody"></div>
+  </details>
+
+  <p class="about-note">I got the Glove80 and couldn't find a good trainer that helped me find the right keys. I built this to help me — maybe it is useful for somebody else too.</p>
+  <p class="about-note">Your stats, keymaps and reading list stay in this browser's local storage — not cookies, never sent anywhere. The whole trainer is one HTML file: <a href="https://github.com/mkirsten/glove80-typing-trainer">grab it from GitHub</a> and run it locally if you'd rather not load it from the web at all.</p>
+</div>
+
+<!-- @script -->
+</body>
+</html>
